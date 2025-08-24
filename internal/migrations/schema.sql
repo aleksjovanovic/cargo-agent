@@ -1,0 +1,15 @@
+CREATE TABLE IF NOT EXISTS users(
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(150) NOT NULL,
+    email VARCHAR(50) NOT NULL, 
+    password VARCHAR(255) NOT NULL,
+    name VARCHAR(150) NOT NULL,
+    country VARCHAR(2) NOT NULL,
+    city VARCHAR(100) NOT NULL,
+    legal_address VARCHAR(100) NOT NULL,
+    vat_number VARCHAR(30) NOT NULL,
+    status CHAR(10) NOT NULL,
+    language CHAR(2) NOT NULL,
+    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
