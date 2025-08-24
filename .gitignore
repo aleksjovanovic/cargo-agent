@@ -1,0 +1,26 @@
+# Binarni fajlovi
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Keš i build folderi
+/vendor/
+/bin/
+/build/
+/dist/
+
+# Editor i IDE fajlovi
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+*.code-workspace
+
+# OS fajlovi
+.DS_Store
+Thumbs.db
