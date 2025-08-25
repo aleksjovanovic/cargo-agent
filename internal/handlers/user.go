@@ -47,12 +47,6 @@ func (h *Handler) LoginUserHandler() http.HandlerFunc {
 			return
 		}
 
-		// Validate the request
-		if err := validation.Validate(&req); err != nil {
-			errorhandler.RespondWithError(w, http.StatusBadRequest, err.Error())
-			return
-		}
-
 		// Fetch the user from database using the store queries
 		user, err := h.Queries.GetUserByUsernameOrEmail(ctx, req.Username)
 		if err != nil {
@@ -88,11 +82,6 @@ func (h *Handler) CreateUserHandler() http.HandlerFunc {
 			return
 		}
 
-		hashedPassword, err := utils.HashPassword(req.Password)
-		if err != nil {
-			errorhandler.RespondWithError(w, http.StatusInternalServerError, "error while hashing password")
-			return
-		}
 		// Validate the request
 		if err := validation.Validate(&req); err != nil {
 			errorhandler.RespondWithError(w, http.StatusBadRequest, err.Error())
@@ -102,13 +91,37 @@ func (h *Handler) CreateUserHandler() http.HandlerFunc {
 		// Start a transaction
 		tx, err := h.DB.BeginTx(ctx, nil)
 		if err != nil {
-			errorhandler.RespondWithError(w, http.StatusInternalServerError, "Failed to start transaction")
+			errorhandler.RespondWithError(w, http.StatusInternalServerError, "failed to start transaction")
 			return
 		}
 		defer tx.Rollback()
 
 		// Create a new Queries instance bound to the transaction
-		_, err = h.Queries.CreateUser(ctx, store.CreateUserParams{
+		qtx := store.New(tx)
+
+		// Check if the username already exists
+		_, err = qtx.GetUserByUsernameOrEmail(ctx, req.Username)
+		if err == nil {
+			errorhandler.RespondWithError(w, http.StatusConflict, "esername already exist")
+			return
+		}
+
+		// Check if the email already exists
+		_, err = qtx.GetUserByUsernameOrEmail(ctx, req.Email)
+		if err == nil {
+			errorhandler.RespondWithError(w, http.StatusConflict, "email already exist")
+			return
+		}
+
+		// Hash password
+		hashedPassword, err := utils.HashPassword(req.Password)
+		if err != nil {
+			errorhandler.RespondWithError(w, http.StatusInternalServerError, "failed to hash password")
+			return
+		}
+
+		// Create user within the transaction
+		newUser, err := qtx.CreateUser(ctx, store.CreateUserParams{
 			Username:     req.Username,
 			Email:        req.Email,
 			Password:     hashedPassword,
@@ -123,17 +136,17 @@ func (h *Handler) CreateUserHandler() http.HandlerFunc {
 			Updated:      sql.NullTime{Time: now, Valid: true},
 		})
 		if err != nil {
-			errorhandler.RespondWithError(w, http.StatusInternalServerError, "error while creating user")
+			errorhandler.RespondWithError(w, http.StatusInternalServerError, "failed to create user")
 			return
 		}
 
-		// Commit transaction
+		// Commit the transaction if all operations succeed
 		if err := tx.Commit(); err != nil {
 			errorhandler.RespondWithError(w, http.StatusInternalServerError, "failed to commit transaction")
 			return
 		}
 
-		successresponse.RespondWithSuccess(w, http.StatusCreated, "user created", req.Name)
+		successresponse.RespondWithSuccess(w, http.StatusCreated, "user created successfully", newUser)
 
 	}
 }
