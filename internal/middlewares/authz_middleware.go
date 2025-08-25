@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/aleksjovanovic/cargo-agent/internal/authn"
-	"github.com/aleksjovanovic/cargo-agent/internal/errorhandler"
+	"github.com/aleksjovanovic/cargo-agent/internal/response"
 	"github.com/dgrijalva/jwt-go"
 )
 
@@ -22,7 +22,13 @@ func AuthzMiddleware(next http.Handler) http.Handler {
 		//Retrieves the authorization header from the request
 		authzHeader := r.Header.Get("Authorization")
 		if authzHeader == "" {
-			errorhandler.RespondWithError(w, http.StatusUnauthorized, "no token provided")
+			response.RespondWithError(
+				w,
+				http.StatusUnauthorized,
+				"no_token",
+				"No token provided",
+				nil,
+			)
 			return
 		}
 		// strips the Berarer from the Bearer token
@@ -35,10 +41,24 @@ func AuthzMiddleware(next http.Handler) http.Handler {
 		})
 		if err != nil {
 			if err == jwt.ErrSignatureInvalid {
-				errorhandler.RespondWithError(w, http.StatusBadRequest, "invalid token signature")
+				response.RespondWithError(
+					w,
+					http.StatusBadRequest,
+					"invalid_token_signature",
+					"Invalid token signature",
+					nil,
+				)
+
 				return
 			}
-			errorhandler.RespondWithError(w, http.StatusBadRequest, "invalid token")
+			response.RespondWithError(
+				w,
+				http.StatusBadRequest,
+				"invalid_token",
+				"Invalid token",
+				nil,
+			)
+
 			return
 		}
 		// if token is valid, store th claims in the request context
@@ -47,7 +67,14 @@ func AuthzMiddleware(next http.Handler) http.Handler {
 			r := r.WithContext(ctx)
 			next.ServeHTTP(w, r)
 		} else {
-			errorhandler.RespondWithError(w, http.StatusUnauthorized, "invalid token")
+			response.RespondWithError(
+				w,
+				http.StatusUnauthorized,
+				"invalid_token",
+				"Invalid token",
+				nil,
+			)
+
 		}
 	})
 }

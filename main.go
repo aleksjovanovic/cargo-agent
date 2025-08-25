@@ -2,11 +2,11 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/aleksjovanovic/cargo-agent/internal/dbconfig"
 	"github.com/aleksjovanovic/cargo-agent/internal/handlers"
+	"github.com/aleksjovanovic/cargo-agent/internal/logger"
 	"github.com/aleksjovanovic/cargo-agent/internal/routes"
 	"github.com/aleksjovanovic/cargo-agent/internal/store"
 )
@@ -16,7 +16,7 @@ func main() {
 	// Load configuration
 	config, err := dbconfig.LoadConfig()
 	if err != nil {
-		log.Fatalf("Failed to load configuration: %v", err)
+		logger.Fatal("Failed to load configuration", "error", err)
 	}
 
 	// Connect to the database
@@ -42,8 +42,8 @@ func main() {
 	}
 
 	// Start server
-	fmt.Printf("Starting server on  %s\n", serverAddr)
+	logger.Info("Starting server", "addr", serverAddr)
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		log.Fatalf("Server failed %v", err)
+		logger.Fatal("Server failed to start", "error", err)
 	}
 }

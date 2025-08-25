@@ -1,8 +1,7 @@
 package utils
 
 import (
-	"log"
-
+	"github.com/aleksjovanovic/cargo-agent/internal/logger"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -10,7 +9,7 @@ import (
 func HashPassword(password string) (string, error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		log.Printf("Error hashing password: %v", err)
+		logger.Error("Failed to hash password", "error", err)
 		return "", err
 	}
 

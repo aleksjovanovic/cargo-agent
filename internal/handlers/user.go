@@ -9,10 +9,9 @@ import (
 
 	"github.com/aleksjovanovic/cargo-agent/internal/authn"
 	"github.com/aleksjovanovic/cargo-agent/internal/dtos/request"
-	"github.com/aleksjovanovic/cargo-agent/internal/errorhandler"
 	"github.com/aleksjovanovic/cargo-agent/internal/middlewares"
+	"github.com/aleksjovanovic/cargo-agent/internal/response"
 	"github.com/aleksjovanovic/cargo-agent/internal/store"
-	"github.com/aleksjovanovic/cargo-agent/internal/successresponse"
 	"github.com/aleksjovanovic/cargo-agent/internal/utils"
 	"github.com/aleksjovanovic/cargo-agent/internal/validation"
 )
@@ -22,7 +21,13 @@ func (h *Handler) UserProfile() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		claims, ok := r.Context().Value(middlewares.UserClaimsKey).(*authn.Claims)
 		if !ok {
-			errorhandler.RespondWithError(w, http.StatusBadRequest, "please log in to continue")
+			response.RespondWithError(
+				w,
+				http.StatusBadRequest,
+				"unauthorized",
+				"Please log in to continue",
+				nil,
+			)
 			return
 		}
 
@@ -30,9 +35,22 @@ func (h *Handler) UserProfile() http.HandlerFunc {
 
 		user, err := h.Queries.GetUser(r.Context(), int32(userID))
 		if err != nil {
-			errorhandler.RespondWithError(w, http.StatusNotFound, "user not found")
+			response.RespondWithError(
+				w,
+				http.StatusNotFound,
+				"not_found",
+				"User not found",
+				nil,
+			)
 		}
-		successresponse.RespondWithSuccess(w, http.StatusOK, "success", user)
+		response.RespondWithSuccess(
+			w,
+			http.StatusOK,
+			response.Envelope{
+				"message": "success",
+				"data":    user,
+			},
+		)
 	}
 }
 
@@ -43,29 +61,60 @@ func (h *Handler) LoginUserHandler() http.HandlerFunc {
 
 		var req request.LoginRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			errorhandler.RespondWithError(w, http.StatusBadRequest, "invalid request payload")
+			response.RespondWithError(
+				w,
+				http.StatusBadRequest,
+				"invalid_payload",
+				"Invalid request payload",
+				nil,
+			)
 			return
 		}
 
 		// Fetch the user from database using the store queries
 		user, err := h.Queries.GetUserByUsernameOrEmail(ctx, req.Username)
 		if err != nil {
-			errorhandler.RespondWithError(w, http.StatusUnauthorized, "invalid credential")
+			response.RespondWithError(
+				w,
+				http.StatusUnauthorized,
+				"invalid_credentials",
+				"Invalid credentials",
+				nil,
+			)
 			return
 		}
 		if !utils.ComparePassword(user.Password, req.Password) {
-			errorhandler.RespondWithError(w, http.StatusUnauthorized, "invalid credential")
+			response.RespondWithError(
+				w,
+				http.StatusUnauthorized,
+				"invalid_credentials",
+				"Invalid credentials",
+				nil,
+			)
 			return
 		}
 		jwtKey := []byte(os.Getenv("JWT_SECRET_KEY"))
 		token, err := authn.GenerateJWT(int64(user.ID), user.Username, jwtKey)
 		if err != nil {
-			errorhandler.RespondWithError(w, http.StatusInternalServerError, "error generating a token")
+			response.RespondWithError(
+				w,
+				http.StatusInternalServerError,
+				"token_generation_error",
+				"Error generating a token",
+				nil,
+			)
 			return
 		}
-		successresponse.RespondWithSuccess(w, http.StatusOK, "login successful", map[string]string{
-			"token": token,
-		})
+		response.RespondWithSuccess(
+			w,
+			http.StatusOK,
+			response.Envelope{
+				"message": "Login successful",
+				"data": map[string]string{
+					"token": token,
+				},
+			},
+		)
 	}
 }
 
@@ -78,20 +127,38 @@ func (h *Handler) CreateUserHandler() http.HandlerFunc {
 		// User request (dataTransportObject)
 		var req request.CreateUserRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			errorhandler.RespondWithError(w, http.StatusBadRequest, "invalid request payload")
+			response.RespondWithError(
+				w,
+				http.StatusBadRequest,
+				"invalid_payload",
+				"Invalid request payload",
+				nil,
+			)
 			return
 		}
 
 		// Validate the request
 		if err := validation.Validate(&req); err != nil {
-			errorhandler.RespondWithError(w, http.StatusBadRequest, err.Error())
+			response.RespondWithError(
+				w,
+				http.StatusBadRequest,
+				"bad_request",
+				err.Error(),
+				nil,
+			)
 			return
 		}
 
 		// Start a transaction
 		tx, err := h.DB.BeginTx(ctx, nil)
 		if err != nil {
-			errorhandler.RespondWithError(w, http.StatusInternalServerError, "failed to start transaction")
+			response.RespondWithError(
+				w,
+				http.StatusInternalServerError,
+				"transaction_start_failed",
+				"Failed to start transaction",
+				nil,
+			)
 			return
 		}
 		defer tx.Rollback()
@@ -102,21 +169,40 @@ func (h *Handler) CreateUserHandler() http.HandlerFunc {
 		// Check if the username already exists
 		_, err = qtx.GetUserByUsernameOrEmail(ctx, req.Username)
 		if err == nil {
-			errorhandler.RespondWithError(w, http.StatusConflict, "esername already exist")
+			response.RespondWithError(
+				w,
+				http.StatusConflict,
+				"username_exists",
+				"Username already exists",
+				nil,
+			)
 			return
 		}
 
 		// Check if the email already exists
 		_, err = qtx.GetUserByUsernameOrEmail(ctx, req.Email)
 		if err == nil {
-			errorhandler.RespondWithError(w, http.StatusConflict, "email already exist")
+			response.RespondWithError(
+				w,
+				http.StatusConflict,
+				"email_exists",
+				"Email already exists",
+				nil,
+			)
+
 			return
 		}
 
 		// Hash password
 		hashedPassword, err := utils.HashPassword(req.Password)
 		if err != nil {
-			errorhandler.RespondWithError(w, http.StatusInternalServerError, "failed to hash password")
+			response.RespondWithError(
+				w,
+				http.StatusInternalServerError,
+				"password_hash_failed",
+				"Failed to hash password",
+				nil,
+			)
 			return
 		}
 
@@ -136,17 +222,36 @@ func (h *Handler) CreateUserHandler() http.HandlerFunc {
 			Updated:      sql.NullTime{Time: now, Valid: true},
 		})
 		if err != nil {
-			errorhandler.RespondWithError(w, http.StatusInternalServerError, "failed to create user")
+			response.RespondWithError(
+				w,
+				http.StatusInternalServerError,
+				"user_creation_failed",
+				"Failed to create user",
+				nil,
+			)
 			return
 		}
 
 		// Commit the transaction if all operations succeed
 		if err := tx.Commit(); err != nil {
-			errorhandler.RespondWithError(w, http.StatusInternalServerError, "failed to commit transaction")
+			response.RespondWithError(
+				w,
+				http.StatusInternalServerError,
+				"transaction_commit_failed",
+				"Failed to commit transaction",
+				nil,
+			)
 			return
 		}
 
-		successresponse.RespondWithSuccess(w, http.StatusCreated, "user created successfully", newUser)
+		response.RespondWithSuccess(
+			w,
+			http.StatusCreated,
+			response.Envelope{
+				"message": "User created successfully",
+				"data":    newUser,
+			},
+		)
 
 	}
 }

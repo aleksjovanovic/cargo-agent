@@ -2,23 +2,23 @@ package dbconfig
 
 import (
 	"database/sql"
-	"fmt"
-	"log"
 
+	"github.com/aleksjovanovic/cargo-agent/internal/logger"
 	_ "github.com/lib/pq"
 )
 
 func ConnectDB(databaseURL string) *sql.DB {
 	db, err := sql.Open("postgres", databaseURL)
 	if err != nil {
-		log.Fatal("Failed to connect to db", err)
+		logger.Fatal("Failed to initialize database connection", "error", err)
 	}
 
 	// Ping to secure connection is established
 	if err = db.Ping(); err != nil {
-		log.Fatalf("Database connection failed: %v", err)
+		logger.Fatal("Failed to establish database connection", "error", err)
 	}
 
-	fmt.Println("Connected to database successfully")
+	logger.Info("Connected to database successfully", "driver", "postgres", "host", databaseURL)
+
 	return db
 }
