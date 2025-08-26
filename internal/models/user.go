@@ -1,17 +1,27 @@
 package models
 
+type UserStatus string
+
+const (
+	UserStatusActive    UserStatus = "active"
+	UserStatusInactive  UserStatus = "inactive"
+	UserStatusSuspended UserStatus = "suspended"
+	UserStatusDeleted   UserStatus = "deleted"
+	UserStatusDraft     UserStatus = "draft"
+)
+
 type User struct {
-	ID           int    `json:"id"`
-	Username     string `json:"username"`
-	Email        string `json:"email"`
-	Password     string `json:"password"`
-	Name         string `json:"name"`
-	Country      string `json:"country"`
-	City         string `json:"city"`
-	LegalAddress string `json:"legal_address"`
-	VatNumber    int    `json:"vat_number"`
-	Status       string `json:"status"` // active, suspended, deleted, draft
-	Language     string `json:"language"`
-	Created      string `json:"created"`
-	Updated      string `json:"updated"`
+	ID           int        `json:"id"`
+	Username     string     `json:"username"`
+	Email        string     `json:"email"`
+	Password     string     `json:"password"`
+	Name         string     `json:"name"`
+	Country      string     `json:"country"`
+	City         string     `json:"city"`
+	LegalAddress string     `json:"legal_address"`
+	VatNumber    int        `json:"vat_number"`
+	Status       UserStatus `json:"status"`
+	Language     string     `json:"language"`
+	Created      string     `json:"created"`
+	Updated      string     `json:"updated"`
 }

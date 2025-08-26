@@ -10,4 +10,8 @@ sql:
         emit_json_tags: true
         emit_prepared_queries: true
         emit_empty_slices: true
+        overrides:
+          - db_type: "user_status"
+            go_type: "github.com/aleksjovanovic/cargo-agent/internal/models.UserStatus"
+
 

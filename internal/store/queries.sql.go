@@ -8,6 +8,8 @@ package store
 import (
 	"context"
 	"database/sql"
+
+	"github.com/aleksjovanovic/cargo-agent/internal/models"
 )
 
 const createUser = `-- name: CreateUser :one
@@ -17,33 +19,33 @@ RETURNING id, username, email, name, country, city, legal_address, vat_number, s
 `
 
 type CreateUserParams struct {
-	Username     string       `json:"username"`
-	Email        string       `json:"email"`
-	Password     string       `json:"password"`
-	Name         string       `json:"name"`
-	Country      string       `json:"country"`
-	City         string       `json:"city"`
-	LegalAddress string       `json:"legal_address"`
-	VatNumber    string       `json:"vat_number"`
-	Status       string       `json:"status"`
-	Language     string       `json:"language"`
-	Created      sql.NullTime `json:"created"`
-	Updated      sql.NullTime `json:"updated"`
+	Username     string            `json:"username"`
+	Email        string            `json:"email"`
+	Password     string            `json:"password"`
+	Name         string            `json:"name"`
+	Country      string            `json:"country"`
+	City         string            `json:"city"`
+	LegalAddress string            `json:"legal_address"`
+	VatNumber    string            `json:"vat_number"`
+	Status       models.UserStatus `json:"status"`
+	Language     string            `json:"language"`
+	Created      sql.NullTime      `json:"created"`
+	Updated      sql.NullTime      `json:"updated"`
 }
 
 type CreateUserRow struct {
-	ID           int32        `json:"id"`
-	Username     string       `json:"username"`
-	Email        string       `json:"email"`
-	Name         string       `json:"name"`
-	Country      string       `json:"country"`
-	City         string       `json:"city"`
-	LegalAddress string       `json:"legal_address"`
-	VatNumber    string       `json:"vat_number"`
-	Status       string       `json:"status"`
-	Language     string       `json:"language"`
-	Created      sql.NullTime `json:"created"`
-	Updated      sql.NullTime `json:"updated"`
+	ID           int32             `json:"id"`
+	Username     string            `json:"username"`
+	Email        string            `json:"email"`
+	Name         string            `json:"name"`
+	Country      string            `json:"country"`
+	City         string            `json:"city"`
+	LegalAddress string            `json:"legal_address"`
+	VatNumber    string            `json:"vat_number"`
+	Status       models.UserStatus `json:"status"`
+	Language     string            `json:"language"`
+	Created      sql.NullTime      `json:"created"`
+	Updated      sql.NullTime      `json:"updated"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateUserRow, error) {
@@ -86,18 +88,18 @@ WHERE id = $1
 `
 
 type GetUserRow struct {
-	ID           int32        `json:"id"`
-	Username     string       `json:"username"`
-	Email        string       `json:"email"`
-	Name         string       `json:"name"`
-	Country      string       `json:"country"`
-	City         string       `json:"city"`
-	LegalAddress string       `json:"legal_address"`
-	VatNumber    string       `json:"vat_number"`
-	Status       string       `json:"status"`
-	Language     string       `json:"language"`
-	Created      sql.NullTime `json:"created"`
-	Updated      sql.NullTime `json:"updated"`
+	ID           int32             `json:"id"`
+	Username     string            `json:"username"`
+	Email        string            `json:"email"`
+	Name         string            `json:"name"`
+	Country      string            `json:"country"`
+	City         string            `json:"city"`
+	LegalAddress string            `json:"legal_address"`
+	VatNumber    string            `json:"vat_number"`
+	Status       models.UserStatus `json:"status"`
+	Language     string            `json:"language"`
+	Created      sql.NullTime      `json:"created"`
+	Updated      sql.NullTime      `json:"updated"`
 }
 
 func (q *Queries) GetUser(ctx context.Context, id int32) (GetUserRow, error) {
@@ -127,19 +129,19 @@ WHERE username = $1 OR email=$1
 `
 
 type GetUserByUsernameOrEmailRow struct {
-	ID           int32        `json:"id"`
-	Username     string       `json:"username"`
-	Password     string       `json:"password"`
-	Email        string       `json:"email"`
-	Name         string       `json:"name"`
-	Country      string       `json:"country"`
-	City         string       `json:"city"`
-	LegalAddress string       `json:"legal_address"`
-	VatNumber    string       `json:"vat_number"`
-	Status       string       `json:"status"`
-	Language     string       `json:"language"`
-	Created      sql.NullTime `json:"created"`
-	Updated      sql.NullTime `json:"updated"`
+	ID           int32             `json:"id"`
+	Username     string            `json:"username"`
+	Password     string            `json:"password"`
+	Email        string            `json:"email"`
+	Name         string            `json:"name"`
+	Country      string            `json:"country"`
+	City         string            `json:"city"`
+	LegalAddress string            `json:"legal_address"`
+	VatNumber    string            `json:"vat_number"`
+	Status       models.UserStatus `json:"status"`
+	Language     string            `json:"language"`
+	Created      sql.NullTime      `json:"created"`
+	Updated      sql.NullTime      `json:"updated"`
 }
 
 func (q *Queries) GetUserByUsernameOrEmail(ctx context.Context, username string) (GetUserByUsernameOrEmailRow, error) {
@@ -170,18 +172,18 @@ ORDER BY id
 `
 
 type ListUsersRow struct {
-	ID           int32        `json:"id"`
-	Username     string       `json:"username"`
-	Email        string       `json:"email"`
-	Name         string       `json:"name"`
-	Country      string       `json:"country"`
-	City         string       `json:"city"`
-	LegalAddress string       `json:"legal_address"`
-	VatNumber    string       `json:"vat_number"`
-	Status       string       `json:"status"`
-	Language     string       `json:"language"`
-	Created      sql.NullTime `json:"created"`
-	Updated      sql.NullTime `json:"updated"`
+	ID           int32             `json:"id"`
+	Username     string            `json:"username"`
+	Email        string            `json:"email"`
+	Name         string            `json:"name"`
+	Country      string            `json:"country"`
+	City         string            `json:"city"`
+	LegalAddress string            `json:"legal_address"`
+	VatNumber    string            `json:"vat_number"`
+	Status       models.UserStatus `json:"status"`
+	Language     string            `json:"language"`
+	Created      sql.NullTime      `json:"created"`
+	Updated      sql.NullTime      `json:"updated"`
 }
 
 func (q *Queries) ListUsers(ctx context.Context) ([]ListUsersRow, error) {

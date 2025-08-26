@@ -6,20 +6,22 @@ package store
 
 import (
 	"database/sql"
+
+	"github.com/aleksjovanovic/cargo-agent/internal/models"
 )
 
 type User struct {
-	ID           int32        `json:"id"`
-	Username     string       `json:"username"`
-	Email        string       `json:"email"`
-	Password     string       `json:"password"`
-	Name         string       `json:"name"`
-	Country      string       `json:"country"`
-	City         string       `json:"city"`
-	LegalAddress string       `json:"legal_address"`
-	VatNumber    string       `json:"vat_number"`
-	Status       string       `json:"status"`
-	Language     string       `json:"language"`
-	Created      sql.NullTime `json:"created"`
-	Updated      sql.NullTime `json:"updated"`
+	ID           int32             `json:"id"`
+	Username     string            `json:"username"`
+	Email        string            `json:"email"`
+	Password     string            `json:"password"`
+	Name         string            `json:"name"`
+	Country      string            `json:"country"`
+	City         string            `json:"city"`
+	LegalAddress string            `json:"legal_address"`
+	VatNumber    string            `json:"vat_number"`
+	Status       models.UserStatus `json:"status"`
+	Language     string            `json:"language"`
+	Created      sql.NullTime      `json:"created"`
+	Updated      sql.NullTime      `json:"updated"`
 }

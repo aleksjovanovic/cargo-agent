@@ -10,6 +10,7 @@ import (
 	"github.com/aleksjovanovic/cargo-agent/internal/authn"
 	"github.com/aleksjovanovic/cargo-agent/internal/dtos/request"
 	"github.com/aleksjovanovic/cargo-agent/internal/middlewares"
+	"github.com/aleksjovanovic/cargo-agent/internal/models"
 	"github.com/aleksjovanovic/cargo-agent/internal/response"
 	"github.com/aleksjovanovic/cargo-agent/internal/store"
 	"github.com/aleksjovanovic/cargo-agent/internal/utils"
@@ -68,6 +69,16 @@ func (h *Handler) LoginUserHandler() http.HandlerFunc {
 				"Invalid request payload",
 				nil,
 			)
+			return
+		}
+
+		if err := validation.ValidateLoginRequest(req); err != nil {
+			response.RespondWithError(
+				w,
+				http.StatusBadRequest,
+				"validation_error",
+				err.Error(),
+				nil)
 			return
 		}
 
@@ -138,7 +149,7 @@ func (h *Handler) CreateUserHandler() http.HandlerFunc {
 		}
 
 		// Validate the request
-		if err := validation.Validate(&req); err != nil {
+		if err := validation.ValidateCreateUserRequest(&req); err != nil {
 			response.RespondWithError(
 				w,
 				http.StatusBadRequest,
@@ -216,7 +227,7 @@ func (h *Handler) CreateUserHandler() http.HandlerFunc {
 			City:         req.City,
 			LegalAddress: req.LegalAddress,
 			VatNumber:    req.VatNumber,
-			Status:       req.Status,
+			Status:       models.UserStatus(req.Status),
 			Language:     req.Language,
 			Created:      sql.NullTime{Time: now, Valid: true},
 			Updated:      sql.NullTime{Time: now, Valid: true},
