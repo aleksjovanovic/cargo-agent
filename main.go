@@ -9,6 +9,7 @@ import (
 	"github.com/aleksjovanovic/cargo-agent/internal/logger"
 	"github.com/aleksjovanovic/cargo-agent/internal/routes"
 	"github.com/aleksjovanovic/cargo-agent/internal/store"
+	"github.com/redis/go-redis/v9"
 )
 
 func main() {
@@ -23,11 +24,17 @@ func main() {
 	db := dbconfig.ConnectDB(config.DatabaseURL)
 	defer db.Close()
 
+	// Connect to Redis
+	rdb := dbconfig.ConnectRedis()
+	defer func(rdb *redis.Client) {
+		_ = rdb.Close()
+	}(rdb)
+
 	// Initialize sqlc queries
 	queries := store.New(db)
 
 	// Create a new handler with queries
-	handler := handlers.NewHandlers(db, queries)
+	handler := handlers.NewHandlers(db, queries, rdb)
 
 	// Set up HTTP server and routes
 	mux := http.NewServeMux()

@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"time"
@@ -34,6 +35,24 @@ func (h *Handler) UserProfile() http.HandlerFunc {
 
 		userID := claims.UserID
 
+		// Check the Redis first
+		cacheKey := fmt.Sprintf("user:%d", userID)
+		if cached, err := h.Redis.Get(r.Context(), cacheKey).Result(); err == nil {
+			var user store.User
+			if err := json.Unmarshal([]byte(cached), &user); err == nil {
+				response.RespondWithSuccess(
+					w,
+					http.StatusOK,
+					response.Envelope{
+						"message": "success (from cache/redis)",
+						"data":    user,
+					},
+				)
+				return
+			}
+		}
+
+		// Fallback to database
 		user, err := h.Queries.GetUser(r.Context(), int32(userID))
 		if err != nil {
 			response.RespondWithError(
@@ -44,6 +63,11 @@ func (h *Handler) UserProfile() http.HandlerFunc {
 				nil,
 			)
 		}
+
+		// Set to Redis
+		userJSON, _ := json.Marshal(user)
+		h.Redis.Set(r.Context(), cacheKey, userJSON, 5*time.Minute)
+
 		response.RespondWithSuccess(
 			w,
 			http.StatusOK,
