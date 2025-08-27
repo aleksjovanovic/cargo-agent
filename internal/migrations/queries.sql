@@ -17,3 +17,24 @@ WHERE username = $1 OR email=$1;
 SELECT id, username, email, name, country, city, legal_address, vat_number, status, language, created, updated
 FROM users
 ORDER BY id;
+
+-- name: ListCountries :many 
+SELECT id, name, code, alpha3_code, eu_member, continent
+FROM countries
+ORDER BY id;
+
+-- name: GetCountryByID :one 
+SELECT id, name, code, alpha3_code, eu_member, continent
+FROM countries
+WHERE id = $1;
+
+-- name: GetCountryByName :one 
+SELECT id, name, code, alpha3_code, eu_member, continent
+FROM countries
+WHERE Lower(name) = Lower($1);
+
+-- name: ListCitiesByCountryID :many 
+SELECT id, name, country_id
+FROM cities
+WHERE country_id=$1
+ORDER BY name;

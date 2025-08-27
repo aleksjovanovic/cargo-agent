@@ -17,3 +17,7 @@ type LoginRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 }
+
+type CountryRequest struct {
+	ID int64 `json:"id"`
+}

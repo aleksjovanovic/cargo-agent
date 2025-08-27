@@ -10,6 +10,21 @@ import (
 	"github.com/aleksjovanovic/cargo-agent/internal/models"
 )
 
+type City struct {
+	ID        int32  `json:"id"`
+	Name      string `json:"name"`
+	CountryID int32  `json:"country_id"`
+}
+
+type Country struct {
+	ID         int32          `json:"id"`
+	Name       string         `json:"name"`
+	Code       string         `json:"code"`
+	Alpha3Code string         `json:"alpha3_code"`
+	EuMember   sql.NullBool   `json:"eu_member"`
+	Continent  sql.NullString `json:"continent"`
+}
+
 type User struct {
 	ID           int32             `json:"id"`
 	Username     string            `json:"username"`

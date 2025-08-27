@@ -81,6 +81,46 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 	return i, err
 }
 
+const getCountryByID = `-- name: GetCountryByID :one
+SELECT id, name, code, alpha3_code, eu_member, continent
+FROM countries
+WHERE id = $1
+`
+
+func (q *Queries) GetCountryByID(ctx context.Context, id int32) (Country, error) {
+	row := q.queryRow(ctx, q.getCountryByIDStmt, getCountryByID, id)
+	var i Country
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Code,
+		&i.Alpha3Code,
+		&i.EuMember,
+		&i.Continent,
+	)
+	return i, err
+}
+
+const getCountryByName = `-- name: GetCountryByName :one
+SELECT id, name, code, alpha3_code, eu_member, continent
+FROM countries
+WHERE Lower(name) = Lower($1)
+`
+
+func (q *Queries) GetCountryByName(ctx context.Context, lower string) (Country, error) {
+	row := q.queryRow(ctx, q.getCountryByNameStmt, getCountryByName, lower)
+	var i Country
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Code,
+		&i.Alpha3Code,
+		&i.EuMember,
+		&i.Continent,
+	)
+	return i, err
+}
+
 const getUser = `-- name: GetUser :one
 SELECT id, username, email, name, country, city, legal_address, vat_number, status, language, created, updated
 FROM users
@@ -163,6 +203,72 @@ func (q *Queries) GetUserByUsernameOrEmail(ctx context.Context, username string)
 		&i.Updated,
 	)
 	return i, err
+}
+
+const listCitiesByCountryID = `-- name: ListCitiesByCountryID :many
+SELECT id, name, country_id
+FROM cities
+WHERE country_id=$1
+ORDER BY name
+`
+
+func (q *Queries) ListCitiesByCountryID(ctx context.Context, countryID int32) ([]City, error) {
+	rows, err := q.query(ctx, q.listCitiesByCountryIDStmt, listCitiesByCountryID, countryID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []City{}
+	for rows.Next() {
+		var i City
+		if err := rows.Scan(&i.ID, &i.Name, &i.CountryID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listCountries = `-- name: ListCountries :many
+SELECT id, name, code, alpha3_code, eu_member, continent
+FROM countries
+ORDER BY id
+`
+
+func (q *Queries) ListCountries(ctx context.Context) ([]Country, error) {
+	rows, err := q.query(ctx, q.listCountriesStmt, listCountries)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Country{}
+	for rows.Next() {
+		var i Country
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Code,
+			&i.Alpha3Code,
+			&i.EuMember,
+			&i.Continent,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listUsers = `-- name: ListUsers :many

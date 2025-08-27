@@ -9,6 +9,7 @@ import (
 func SetupRoutes(mux *http.ServeMux, handler *handlers.Handler) {
 	SetupHealthCheckRoute(mux, handler)
 	SetupUserRoutes(mux, handler)
+	SetupCountryRoutes(mux, handler)
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {

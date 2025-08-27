@@ -62,6 +62,7 @@ func (h *Handler) UserProfile() http.HandlerFunc {
 				"User not found",
 				nil,
 			)
+			return
 		}
 
 		// Set to Redis

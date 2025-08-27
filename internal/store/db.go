@@ -27,11 +27,23 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.createUserStmt, err = db.PrepareContext(ctx, createUser); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateUser: %w", err)
 	}
+	if q.getCountryByIDStmt, err = db.PrepareContext(ctx, getCountryByID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetCountryByID: %w", err)
+	}
+	if q.getCountryByNameStmt, err = db.PrepareContext(ctx, getCountryByName); err != nil {
+		return nil, fmt.Errorf("error preparing query GetCountryByName: %w", err)
+	}
 	if q.getUserStmt, err = db.PrepareContext(ctx, getUser); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUser: %w", err)
 	}
 	if q.getUserByUsernameOrEmailStmt, err = db.PrepareContext(ctx, getUserByUsernameOrEmail); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUserByUsernameOrEmail: %w", err)
+	}
+	if q.listCitiesByCountryIDStmt, err = db.PrepareContext(ctx, listCitiesByCountryID); err != nil {
+		return nil, fmt.Errorf("error preparing query ListCitiesByCountryID: %w", err)
+	}
+	if q.listCountriesStmt, err = db.PrepareContext(ctx, listCountries); err != nil {
+		return nil, fmt.Errorf("error preparing query ListCountries: %w", err)
 	}
 	if q.listUsersStmt, err = db.PrepareContext(ctx, listUsers); err != nil {
 		return nil, fmt.Errorf("error preparing query ListUsers: %w", err)
@@ -46,6 +58,16 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing createUserStmt: %w", cerr)
 		}
 	}
+	if q.getCountryByIDStmt != nil {
+		if cerr := q.getCountryByIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getCountryByIDStmt: %w", cerr)
+		}
+	}
+	if q.getCountryByNameStmt != nil {
+		if cerr := q.getCountryByNameStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getCountryByNameStmt: %w", cerr)
+		}
+	}
 	if q.getUserStmt != nil {
 		if cerr := q.getUserStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getUserStmt: %w", cerr)
@@ -54,6 +76,16 @@ func (q *Queries) Close() error {
 	if q.getUserByUsernameOrEmailStmt != nil {
 		if cerr := q.getUserByUsernameOrEmailStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getUserByUsernameOrEmailStmt: %w", cerr)
+		}
+	}
+	if q.listCitiesByCountryIDStmt != nil {
+		if cerr := q.listCitiesByCountryIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing listCitiesByCountryIDStmt: %w", cerr)
+		}
+	}
+	if q.listCountriesStmt != nil {
+		if cerr := q.listCountriesStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing listCountriesStmt: %w", cerr)
 		}
 	}
 	if q.listUsersStmt != nil {
@@ -101,8 +133,12 @@ type Queries struct {
 	db                           DBTX
 	tx                           *sql.Tx
 	createUserStmt               *sql.Stmt
+	getCountryByIDStmt           *sql.Stmt
+	getCountryByNameStmt         *sql.Stmt
 	getUserStmt                  *sql.Stmt
 	getUserByUsernameOrEmailStmt *sql.Stmt
+	listCitiesByCountryIDStmt    *sql.Stmt
+	listCountriesStmt            *sql.Stmt
 	listUsersStmt                *sql.Stmt
 }
 
@@ -111,8 +147,12 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		db:                           tx,
 		tx:                           tx,
 		createUserStmt:               q.createUserStmt,
+		getCountryByIDStmt:           q.getCountryByIDStmt,
+		getCountryByNameStmt:         q.getCountryByNameStmt,
 		getUserStmt:                  q.getUserStmt,
 		getUserByUsernameOrEmailStmt: q.getUserByUsernameOrEmailStmt,
+		listCitiesByCountryIDStmt:    q.listCitiesByCountryIDStmt,
+		listCountriesStmt:            q.listCountriesStmt,
 		listUsersStmt:                q.listUsersStmt,
 	}
 }
