@@ -115,14 +115,14 @@ func (h *Handler) GetCountryByID() http.HandlerFunc {
 		cacheKey := "countries:id:{id}:v1"
 
 		if cached, err := h.Redis.Get(ctx, cacheKey).Result(); err == nil {
-			var countries []store.Country
-			if err := json.Unmarshal([]byte(cached), &countries); err == nil {
+			var country store.Country
+			if err := json.Unmarshal([]byte(cached), &country); err == nil {
 				response.RespondWithSuccess(
 					w,
 					http.StatusOK,
 					response.Envelope{
 						"message": "success (from cache/redis)",
-						"data":    countries,
+						"data":    country,
 					},
 				)
 				return
