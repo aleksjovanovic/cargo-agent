@@ -66,8 +66,9 @@ func (h *Handler) UserProfile() http.HandlerFunc {
 		}
 
 		// Set to Redis
-		userJSON, _ := json.Marshal(user)
-		h.Redis.Set(r.Context(), cacheKey, userJSON, 5*time.Minute)
+		if b, err := json.Marshal(user); err == nil {
+			_ = h.Redis.Set(r.Context(), cacheKey, b, 1*time.Hour).Err()
+		}
 
 		response.RespondWithSuccess(
 			w,

@@ -35,10 +35,9 @@ func (h *Handler) ListCountries() http.HandlerFunc {
 		}
 
 		// Check the Redis first
-		ctx := r.Context()
 		cacheKey := "countries:list:v1"
 
-		if cached, err := h.Redis.Get(ctx, cacheKey).Result(); err == nil {
+		if cached, err := h.Redis.Get(r.Context(), cacheKey).Result(); err == nil {
 			var countries []store.Country
 			if err := json.Unmarshal([]byte(cached), &countries); err == nil {
 				response.RespondWithSuccess(
@@ -68,7 +67,7 @@ func (h *Handler) ListCountries() http.HandlerFunc {
 
 		// Set to Redis
 		if b, err := json.Marshal(countries); err == nil {
-			_ = h.Redis.Set(ctx, cacheKey, b, 24*time.Hour).Err() // for this case TTL can be 0
+			_ = h.Redis.Set(r.Context(), cacheKey, b, 24*time.Hour).Err() // for this case TTL can be 0
 		}
 
 		response.RespondWithSuccess(
@@ -111,10 +110,9 @@ func (h *Handler) GetCountryByID() http.HandlerFunc {
 		}
 
 		// Check the Redis first
-		ctx := r.Context()
 		cacheKey := "countries:id:{id}:v1"
 
-		if cached, err := h.Redis.Get(ctx, cacheKey).Result(); err == nil {
+		if cached, err := h.Redis.Get(r.Context(), cacheKey).Result(); err == nil {
 			var country store.Country
 			if err := json.Unmarshal([]byte(cached), &country); err == nil {
 				response.RespondWithSuccess(
@@ -144,7 +142,7 @@ func (h *Handler) GetCountryByID() http.HandlerFunc {
 
 		// Set to Redis
 		if b, err := json.Marshal(country); err == nil {
-			_ = h.Redis.Set(ctx, cacheKey, b, 24*time.Hour).Err() // for this case TTL can be 0
+			_ = h.Redis.Set(r.Context(), cacheKey, b, 24*time.Hour).Err() // for this case TTL can be 0
 		}
 
 		response.RespondWithSuccess(
@@ -236,11 +234,10 @@ func (h *Handler) ListCitiesByCountryID() http.HandlerFunc {
 			return
 		}
 
-		ctx := r.Context()
+		// Check the Redis first
 		cacheKey := fmt.Sprintf("countries:%d:cities:v1", int32(countryId))
 
-		// Check the Redis first
-		if cached, err := h.Redis.Get(ctx, cacheKey).Result(); err == nil {
+		if cached, err := h.Redis.Get(r.Context(), cacheKey).Result(); err == nil {
 			var cities []store.City
 			if err := json.Unmarshal([]byte(cached), &cities); err == nil {
 				response.RespondWithSuccess(
@@ -270,7 +267,7 @@ func (h *Handler) ListCitiesByCountryID() http.HandlerFunc {
 
 		// Set to Redis
 		if b, err := json.Marshal(cities); err == nil {
-			_ = h.Redis.Set(ctx, cacheKey, b, 24*time.Hour).Err() // for this case TTL can be 0
+			_ = h.Redis.Set(r.Context(), cacheKey, b, 24*time.Hour).Err() // for this case TTL can be 0
 		}
 
 		response.RespondWithSuccess(
