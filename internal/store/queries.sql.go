@@ -12,6 +12,23 @@ import (
 	"github.com/aleksjovanovic/cargo-agent/internal/models"
 )
 
+const changePassword = `-- name: ChangePassword :exec
+UPDATE users
+SET password=$2, updated=$3
+WHERE id = $1
+`
+
+type ChangePasswordParams struct {
+	ID       int32        `json:"id"`
+	Password string       `json:"password"`
+	Updated  sql.NullTime `json:"updated"`
+}
+
+func (q *Queries) ChangePassword(ctx context.Context, arg ChangePasswordParams) error {
+	_, err := q.exec(ctx, q.changePasswordStmt, changePassword, arg.ID, arg.Password, arg.Updated)
+	return err
+}
+
 const createUser = `-- name: CreateUser :one
 INSERT INTO users(username, email, password, name, country, city, legal_address, vat_number, status, language, created, updated)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
@@ -203,6 +220,19 @@ func (q *Queries) GetUserByUsernameOrEmail(ctx context.Context, username string)
 		&i.Updated,
 	)
 	return i, err
+}
+
+const getUserPassword = `-- name: GetUserPassword :one
+SELECT password
+FROM users
+WHERE id = $1
+`
+
+func (q *Queries) GetUserPassword(ctx context.Context, id int32) (string, error) {
+	row := q.queryRow(ctx, q.getUserPasswordStmt, getUserPassword, id)
+	var password string
+	err := row.Scan(&password)
+	return password, err
 }
 
 const listCitiesByCountryID = `-- name: ListCitiesByCountryID :many

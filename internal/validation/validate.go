@@ -199,3 +199,48 @@ func isEmailValidBasic(email string) bool {
 
 	return true
 }
+
+func ValidateChangePasswordRequest(newPassword string) error {
+	var errs []string
+
+	trim := func(s string) string { return strings.TrimSpace(s) }
+
+	// Password: required, min 8 characters, at least 1 uppercase, 1 lowercase, 1 number, 1 special character
+	if v := trim(newPassword); v == "" {
+		errs = append(errs, "new password is required")
+	} else {
+		if len(v) < 8 {
+			errs = append(errs, "new password must be at least 8 characters long")
+		}
+		var up, lo, di, sp bool
+		for _, c := range v {
+			switch {
+			case unicode.IsUpper(c):
+				up = true
+			case unicode.IsLower(c):
+				lo = true
+			case unicode.IsDigit(c):
+				di = true
+			case unicode.IsPunct(c) || unicode.IsSymbol(c):
+				sp = true
+			}
+		}
+		if !up {
+			errs = append(errs, "new password must contain at least one uppercase letter")
+		}
+		if !lo {
+			errs = append(errs, "new password must contain at least one lowercase letter")
+		}
+		if !di {
+			errs = append(errs, "new password must contain at least one digit")
+		}
+		if !sp {
+			errs = append(errs, "new password must contain at least one special character")
+		}
+	}
+
+	if len(errs) > 0 {
+		return fmt.Errorf(strings.Join(errs, ", "))
+	}
+	return nil
+}

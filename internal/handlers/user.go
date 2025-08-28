@@ -18,7 +18,7 @@ import (
 	"github.com/aleksjovanovic/cargo-agent/internal/validation"
 )
 
-// user profile
+// User profile
 func (h *Handler) UserProfile() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		claims, ok := r.Context().Value(middlewares.UserClaimsKey).(*authn.Claims)
@@ -81,6 +81,131 @@ func (h *Handler) UserProfile() http.HandlerFunc {
 	}
 }
 
+// Change user password
+func (h *Handler) ChangePassword() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		now := time.Now()
+
+		claims, ok := r.Context().Value(middlewares.UserClaimsKey).(*authn.Claims)
+		if !ok {
+			response.RespondWithError(
+				w,
+				http.StatusUnauthorized,
+				"unauthorized",
+				"Please log in to continue",
+				nil,
+			)
+			return
+		}
+
+		// ChangePassword request (dataTransportObject)
+		var req request.ChangePasswordRequest
+		if err := utils.DecodeJSONBody(w, r, &req, 1<<20); err != nil {
+			if j, ok := err.(*utils.JSONError); ok {
+				response.RespondWithError(w,
+					http.StatusBadRequest,
+					"invalid_payload",
+					j.Msg,
+					nil)
+				return
+			}
+			// fallback
+			response.RespondWithError(w,
+				http.StatusBadRequest,
+				"invalid_payload",
+				"Invalid request payload.",
+				nil)
+			return
+		}
+
+		userID := claims.UserID
+
+		password, err := h.Queries.GetUserPassword(r.Context(), int32(userID))
+		if err != nil {
+			response.RespondWithError(
+				w,
+				http.StatusNotFound,
+				"not_found",
+				"User not found",
+				nil,
+			)
+			return
+		}
+		if !utils.ComparePassword(password, req.OldPassword) {
+			response.RespondWithError(
+				w,
+				http.StatusUnauthorized,
+				"invalid_old_password",
+				"Old password is incorrect",
+				nil,
+			)
+			return
+		}
+		if utils.ComparePassword(password, req.NewPassword) {
+			response.RespondWithError(
+				w,
+				http.StatusBadRequest,
+				"invalid_new_password",
+				"New password must be different from the old password",
+				nil,
+			)
+			return
+		}
+
+		// Validate the request
+		if err := validation.ValidateChangePasswordRequest(req.NewPassword); err != nil {
+			response.RespondWithError(
+				w,
+				http.StatusBadRequest,
+				"bad_request",
+				err.Error(),
+				nil,
+			)
+			return
+		}
+
+		// Hash password
+		hashedNewPassword, err := utils.HashPassword(req.NewPassword)
+		if err != nil {
+			response.RespondWithError(
+				w,
+				http.StatusInternalServerError,
+				"password_hash_failed",
+				"Failed to hash new password",
+				nil,
+			)
+			return
+		}
+
+		// Create user within the transaction
+		err = h.Queries.ChangePassword(ctx, store.ChangePasswordParams{
+			ID:       int32(userID),
+			Password: hashedNewPassword,
+			Updated:  sql.NullTime{Time: now, Valid: true},
+		})
+		if err != nil {
+			response.RespondWithError(
+				w,
+				http.StatusInternalServerError,
+				"pasword_update_failed",
+				"Failed to change password",
+				nil,
+			)
+			return
+		}
+
+		response.RespondWithSuccess(
+			w,
+			http.StatusOK,
+			response.Envelope{
+				"message": "Password updated successfully",
+				"data":    nil,
+			},
+		)
+	}
+}
+
 // Login a user
 func (h *Handler) LoginUserHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -120,6 +245,7 @@ func (h *Handler) LoginUserHandler() http.HandlerFunc {
 			)
 			return
 		}
+
 		if !utils.ComparePassword(user.Password, req.Password) {
 			response.RespondWithError(
 				w,

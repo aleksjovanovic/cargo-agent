@@ -10,6 +10,6 @@ func SetupHealthCheckRoute(mux *http.ServeMux, handler *handlers.Handler) {
 	userMux := http.NewServeMux()
 
 	// Define healt-check route with method-based routing
-	userMux.HandleFunc("GET /healt-check", handler.HealthCheckHandler())
+	userMux.HandleFunc("GET /health-check", handler.HealthCheckHandler())
 	mux.Handle("/cargo-agent/v1/", http.StripPrefix("/cargo-agent/v1", userMux))
 }

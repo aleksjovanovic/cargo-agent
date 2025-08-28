@@ -110,7 +110,7 @@ func (h *Handler) GetCountryByID() http.HandlerFunc {
 		}
 
 		// Check the Redis first
-		cacheKey := "countries:id:{id}:v1"
+		cacheKey := fmt.Sprintf("countries:id:%d:v1", countryId)
 
 		if cached, err := h.Redis.Get(r.Context(), cacheKey).Result(); err == nil {
 			var country store.Country

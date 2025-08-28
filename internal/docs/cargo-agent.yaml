@@ -1,0 +1,635 @@
+openapi: 3.0.3
+info:
+  title: Cargo Agent API
+  version: 1.0.0
+  description: |
+    Cargo Agent is an API designed to help logistics companies and freight forwarders.
+    It provides functionality for discovering optimal transport routes for carriers,
+    as well as finding available carriers for transporting cargo.
+    This API simplifies the process of matching freight with carriers, improving efficiency
+    and reducing the complexity of cargo transportation management.
+
+servers:
+  - url: http://localhost:8081/cargo-agent/v1
+
+paths:
+  /health-check:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      description: Returns a simple OK message to indicate the server is healthy.
+      operationId: getHealthCheck
+      responses:
+        '200':
+          description: Server is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthCheckResponse'
+              examples:
+                ok:
+                  value:
+                    message: Server is OK
+
+  /users/login:
+    post:
+      tags:
+        - Auth
+      summary: Login
+      description: Authenticates a user with username and password and returns a JWT token.
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            examples:
+              sample:
+                value:
+                  username: demo
+                  password: DemoPass123!
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginSuccessResponse'
+              examples:
+                ok:
+                  value:
+                    message: Login successful
+                    data:
+                      token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        '400':
+          description: Invalid request payload or validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /users/profile:
+    get:
+      tags:
+        - User
+      summary: Get current user's profile
+      description: Returns the authenticated user's profile. Requires a valid JWT token.
+      operationId: getUserProfile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Profile loaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileSuccessResponse'
+              examples:
+                sample:
+                  value:
+                    message: success
+                    data:
+                      id: 123
+                      username: demo
+                      email: demo@example.com
+                      name: Demo User
+                      country: RS
+                      city: Nis
+                      legal_address: "Some street 10, 18000 Nis"
+                      vat_number: "RS123456789"
+                      status: active
+                      language: en
+                      created: "2025-08-21T10:15:30Z"
+                      updated: "2025-08-28T09:45:00Z"
+        '401':
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                unauthorized:
+                  value:
+                    error: unauthorized
+                    message: Please log in to continue
+                    details: null
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  value:
+                    error: not_found
+                    message: User not found
+                    details: null
+
+  /countries:
+    get:
+      tags:
+        - Country
+      summary: List countries
+      description: Returns a list of countries. Requires a valid JWT token.
+      operationId: listCountries
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Countries loaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CountriesListSuccessResponse'
+              examples:
+                from_cache:
+                  value:
+                    message: success (from cache/redis)
+                    data:
+                      - id: 15
+                        name: Germany
+                        code: DE
+                        alpha3_code: DEU
+                        eu_member: true
+                        continent: Europe
+                      - id: 36
+                        name: Serbia
+                        code: RS
+                        alpha3_code: SRB
+                        eu_member: false
+                        continent: Europe
+        '401':
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                unauthorized:
+                  value:
+                    error: unauthorized
+                    message: Please log in to continue
+                    details: null
+        '404':
+          description: Countries not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  value:
+                    error: not_found
+                    message: Countries not found
+                    details: null
+
+  /countries/{id}:
+    get:
+      tags:
+        - Country
+      summary: Get country by ID
+      description: Returns a single country by its ID. Requires a valid JWT token.
+      operationId: getCountryById
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Country ID (integer)
+          schema:
+            type: integer
+            format: int32
+          example: 1
+      responses:
+        '200':
+          description: Country loaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CountrySuccessResponse'
+              examples:
+                sample:
+                  value:
+                    message: success
+                    data:
+                      id: 36
+                      name: Serbia
+                      code: RS
+                      alpha3_code: SRB
+                      eu_member: false
+                      continent: Europe
+                from_cache:
+                  value:
+                    message: success (from cache/redis)
+                    data:
+                      id: 36
+                      name: Serbia
+                      code: RS
+                      alpha3_code: SRB
+                      eu_member: false
+                      continent: Europe
+        '400':
+          description: Invalid ID (must be an integer)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalid_id:
+                  value:
+                    error: invalid_id
+                    message: ID must be a valid integer
+                    details: null
+        '401':
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                unauthorized:
+                  value:
+                    error: unauthorized
+                    message: Please log in to continue
+                    details: null
+        '404':
+          description: Country not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  value:
+                    error: not_found
+                    message: Country not found
+                    details: null
+
+  /countries/name/{name}:
+    get:
+      tags:
+        - Country
+      summary: Get country by name
+      description: Returns a single country by its name. Requires a valid JWT token.
+      operationId: getCountryByName
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: name
+          in: path
+          required: true
+          description: Country name (string)
+          schema:
+            type: string
+          example: Serbia
+      responses:
+        '200':
+          description: Country loaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CountrySuccessResponse'
+              examples:
+                sample:
+                  value:
+                    message: success
+                    data:
+                      id: 36
+                      name: Serbia
+                      code: RS
+                      alpha3_code: SRB
+                      eu_member: false
+                      continent: Europe
+        '400':
+          description: Invalid name (empty or only whitespace)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalid_name:
+                  value:
+                    error: invalid_name
+                    message: Country name cannot be empty
+                    details: null
+        '401':
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                unauthorized:
+                  value:
+                    error: unauthorized
+                    message: Please log in to continue
+                    details: null
+        '404':
+          description: Country not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  value:
+                    error: not_found
+                    message: Country not found
+                    details: null
+
+  /countries/id/{id}/cities:
+    get:
+      tags:
+        - Country
+        - City
+      summary: List cities by country ID
+      description: Returns a list of cities for the given country ID. Requires a valid JWT token.
+      operationId: listCitiesByCountryId
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Country ID (integer)
+          schema:
+            type: integer
+            format: int32
+          example: 1
+      responses:
+        '200':
+          description: Cities loaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CitiesListByCountrySuccessResponse'
+              examples:
+                from_cache:
+                  value:
+                    message: success (from cache/redis)
+                    data:
+                      - id: 36
+                        name: Belgrade
+                        country_id: 36
+        '400':
+          description: Invalid ID (must be an integer)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalid_id:
+                  value:
+                    error: invalid_id
+                    message: ID must be a valid integer
+                    details: null
+        '401':
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                unauthorized:
+                  value:
+                    error: unauthorized
+                    message: Please log in to continue
+                    details: null
+        '404':
+          description: Cities not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  value:
+                    error: not_found
+                    message: Cities not found
+                    details: null
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    HealthCheckResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Server is OK
+      required:
+        - message
+
+    LoginRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          example: demo
+        password:
+          type: string
+          format: password
+          example: DemoPass123!
+
+    LoginSuccessResponse:
+      type: object
+      required:
+        - message
+        - data
+      properties:
+        message:
+          type: string
+          example: Login successful
+        data:
+          type: object
+          required:
+            - token
+          properties:
+            token:
+              type: string
+              description: JWT access token
+              example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+          example: 123
+        username:
+          type: string
+          example: demo
+        email:
+          type: string
+          format: email
+          example: demo@example.com
+        name:
+          type: string
+          example: Demo User
+        country:
+          type: string
+          example: RS
+        city:
+          type: string
+          example: Nis
+        legal_address:
+          type: string
+          example: "Some street 10, 18000 Nis"
+        vat_number:
+          type: string
+          example: "RS123456789"
+        status:
+          type: string
+          description: User status (e.g., active, inactive, blocked)
+          example: active
+        language:
+          type: string
+          example: en
+        created:
+          type: string
+          format: date-time
+          nullable: true
+        updated:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+        - id
+        - username
+        - email
+        - status
+
+    UserProfileSuccessResponse:
+      type: object
+      required:
+        - message
+        - data
+      properties:
+        message:
+          type: string
+          example: success
+        data:
+          $ref: '#/components/schemas/User'
+
+    Country:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+          example: 1
+        name:
+          type: string
+          example: Serbia
+        code:
+          type: string
+          example: RS
+        alpha3_code:
+          type: string
+          example: SRB
+        eu_member:
+          type: boolean
+          nullable: true
+          example: false
+        continent:
+          type: string
+          nullable: true
+          example: Europe
+      required:
+        - id
+        - name
+        - code
+        - alpha3_code
+
+    CountriesListSuccessResponse:
+      type: object
+      required:
+        - message
+        - data
+      properties:
+        message:
+          type: string
+          example: success
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Country'
+
+    CountrySuccessResponse:
+      type: object
+      required:
+        - message
+        - data
+      properties:
+        message:
+          type: string
+          example: success
+        data:
+          $ref: '#/components/schemas/Country'
+
+    City:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+          example: 10
+        name:
+          type: string
+          example: Belgrade
+        country_id:
+          type: integer
+          format: int32
+          example: 1
+      required:
+        - id
+        - name
+        - country_id
+
+    CitiesListByCountrySuccessResponse:
+      type: object
+      required:
+        - message
+        - data
+      properties:
+        message:
+          type: string
+          example: success
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/City'
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          example: invalid_payload
+        message:
+          type: string
+          example: Invalid request payload
+        details:
+          nullable: true

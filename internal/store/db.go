@@ -24,6 +24,9 @@ func New(db DBTX) *Queries {
 func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	q := Queries{db: db}
 	var err error
+	if q.changePasswordStmt, err = db.PrepareContext(ctx, changePassword); err != nil {
+		return nil, fmt.Errorf("error preparing query ChangePassword: %w", err)
+	}
 	if q.createUserStmt, err = db.PrepareContext(ctx, createUser); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateUser: %w", err)
 	}
@@ -39,6 +42,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getUserByUsernameOrEmailStmt, err = db.PrepareContext(ctx, getUserByUsernameOrEmail); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUserByUsernameOrEmail: %w", err)
 	}
+	if q.getUserPasswordStmt, err = db.PrepareContext(ctx, getUserPassword); err != nil {
+		return nil, fmt.Errorf("error preparing query GetUserPassword: %w", err)
+	}
 	if q.listCitiesByCountryIDStmt, err = db.PrepareContext(ctx, listCitiesByCountryID); err != nil {
 		return nil, fmt.Errorf("error preparing query ListCitiesByCountryID: %w", err)
 	}
@@ -53,6 +59,11 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 
 func (q *Queries) Close() error {
 	var err error
+	if q.changePasswordStmt != nil {
+		if cerr := q.changePasswordStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing changePasswordStmt: %w", cerr)
+		}
+	}
 	if q.createUserStmt != nil {
 		if cerr := q.createUserStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing createUserStmt: %w", cerr)
@@ -76,6 +87,11 @@ func (q *Queries) Close() error {
 	if q.getUserByUsernameOrEmailStmt != nil {
 		if cerr := q.getUserByUsernameOrEmailStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getUserByUsernameOrEmailStmt: %w", cerr)
+		}
+	}
+	if q.getUserPasswordStmt != nil {
+		if cerr := q.getUserPasswordStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getUserPasswordStmt: %w", cerr)
 		}
 	}
 	if q.listCitiesByCountryIDStmt != nil {
@@ -132,11 +148,13 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 type Queries struct {
 	db                           DBTX
 	tx                           *sql.Tx
+	changePasswordStmt           *sql.Stmt
 	createUserStmt               *sql.Stmt
 	getCountryByIDStmt           *sql.Stmt
 	getCountryByNameStmt         *sql.Stmt
 	getUserStmt                  *sql.Stmt
 	getUserByUsernameOrEmailStmt *sql.Stmt
+	getUserPasswordStmt          *sql.Stmt
 	listCitiesByCountryIDStmt    *sql.Stmt
 	listCountriesStmt            *sql.Stmt
 	listUsersStmt                *sql.Stmt
@@ -146,11 +164,13 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
 		db:                           tx,
 		tx:                           tx,
+		changePasswordStmt:           q.changePasswordStmt,
 		createUserStmt:               q.createUserStmt,
 		getCountryByIDStmt:           q.getCountryByIDStmt,
 		getCountryByNameStmt:         q.getCountryByNameStmt,
 		getUserStmt:                  q.getUserStmt,
 		getUserByUsernameOrEmailStmt: q.getUserByUsernameOrEmailStmt,
+		getUserPasswordStmt:          q.getUserPasswordStmt,
 		listCitiesByCountryIDStmt:    q.listCitiesByCountryIDStmt,
 		listCountriesStmt:            q.listCountriesStmt,
 		listUsersStmt:                q.listUsersStmt,

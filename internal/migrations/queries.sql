@@ -8,6 +8,16 @@ SELECT id, username, email, name, country, city, legal_address, vat_number, stat
 FROM users
 WHERE id = $1;
 
+-- name: GetUserPassword :one
+SELECT password
+FROM users
+WHERE id = $1;
+
+-- name: ChangePassword :exec
+UPDATE users
+SET password=$2, updated=$3
+WHERE id = $1;
+
 -- name: GetUserByUsernameOrEmail :one
 SELECT id, username, password, email, name, country, city, legal_address, vat_number, status, language, created, updated
 FROM users
