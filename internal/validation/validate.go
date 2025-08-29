@@ -32,7 +32,7 @@ func ValidateCreateUserRequest(req *request.CreateUserRequest) error {
 
 	// Email: required + custom struktura (x@y.z)
 	if v := trim(req.Email); v == "" {
-		errs = append(errs, "email is is required")
+		errs = append(errs, "email is required")
 	} else if !isEmailValidBasic(v) {
 		errs = append(errs, "email must be in a valid format (e.g. name@example.com)")
 	}
@@ -128,6 +128,108 @@ func ValidateCreateUserRequest(req *request.CreateUserRequest) error {
 
 	if len(errs) > 0 {
 		return fmt.Errorf(strings.Join(errs, ", "))
+	}
+	return nil
+}
+
+func ValidateUpdateUserProfileRequest(req *request.UpdateUserProfileRequest) error {
+	if req == nil {
+		return fmt.Errorf("request is nil")
+	}
+
+	var errs []string
+
+	trim := func(p *string) (string, bool) {
+		if p == nil {
+			return "", false // polje nije poslato
+		}
+		return strings.TrimSpace(*p), true
+	}
+	minMax := func(field, v string, min, max int) {
+		if l := len(v); l < min || l > max {
+			errs = append(errs, fmt.Sprintf("%s must be between %d and %d characters long", field, min, max))
+		}
+	}
+	exact := func(field, v string, n int) {
+		if len(v) != n {
+			errs = append(errs, fmt.Sprintf("%s must be exactly %d characters long", field, n))
+		}
+	}
+
+	// Username: ako je poslato, ne sme biti prazno; 3-150
+	if v, ok := trim(req.Username); ok {
+		if v == "" {
+			errs = append(errs, "username cannot be empty")
+		} else {
+			minMax("username", v, 3, 150)
+		}
+	}
+
+	// Email: ako je poslato, ne sme biti prazno i mora validan format
+	if v, ok := trim(req.Email); ok {
+		if v == "" {
+			errs = append(errs, "email cannot be empty")
+		} else if !isEmailValidBasic(v) {
+			errs = append(errs, "email must be in a valid format (e.g. name@example.com)")
+		}
+	}
+
+	// Name: ako je poslato, ne sme biti prazno; 3-150
+	if v, ok := trim(req.Name); ok {
+		if v == "" {
+			errs = append(errs, "name cannot be empty")
+		} else {
+			minMax("name", v, 3, 150)
+		}
+	}
+
+	// Country: ako je poslato, ne sme biti prazno; tačno 2 char
+	if v, ok := trim(req.Country); ok {
+		if v == "" {
+			errs = append(errs, "country cannot be empty")
+		} else {
+			exact("country", v, 2)
+		}
+	}
+
+	// City: ako je poslato, ne sme biti prazno; 3-100
+	if v, ok := trim(req.City); ok {
+		if v == "" {
+			errs = append(errs, "city cannot be empty")
+		} else {
+			minMax("city", v, 3, 100)
+		}
+	}
+
+	// LegalAddress: ako je poslato, ne sme biti prazno; 3-100
+	if v, ok := trim(req.LegalAddress); ok {
+		if v == "" {
+			errs = append(errs, "legal_address cannot be empty")
+		} else {
+			minMax("legal_address", v, 3, 100)
+		}
+	}
+
+	// VatNumber: ako je poslato, ne sme biti prazno; 3-30
+	if v, ok := trim(req.VatNumber); ok {
+		if v == "" {
+			errs = append(errs, "vat_number cannot be empty")
+		} else {
+			minMax("vat_number", v, 3, 30)
+		}
+	}
+
+	// Language: ako je poslato, ne sme biti prazno; tačno 2 char
+	if v, ok := trim(req.Language); ok {
+		if v == "" {
+			errs = append(errs, "language cannot be empty")
+		} else {
+			exact("language", v, 2)
+		}
+	}
+
+	if len(errs) > 0 {
+		return fmt.Errorf(strings.Join(errs, "; "))
 	}
 	return nil
 }

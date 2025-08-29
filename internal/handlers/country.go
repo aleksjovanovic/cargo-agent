@@ -15,7 +15,7 @@ import (
 )
 
 // Get all countries
-func (h *Handler) ListCountries() http.HandlerFunc {
+func (h *Handler) ListCountriesHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
 			response.RespondWithError(w, http.StatusNotFound, "not_found", "Unknown path", nil)
@@ -82,7 +82,7 @@ func (h *Handler) ListCountries() http.HandlerFunc {
 }
 
 // Get country by id
-func (h *Handler) GetCountryByID() http.HandlerFunc {
+func (h *Handler) GetCountryByIDHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		_, ok := r.Context().Value(middlewares.UserClaimsKey).(*authn.Claims)
 		if !ok {
@@ -157,7 +157,7 @@ func (h *Handler) GetCountryByID() http.HandlerFunc {
 }
 
 // Get country by name
-func (h *Handler) GetCountryByName() http.HandlerFunc {
+func (h *Handler) GetCountryByNameHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		_, ok := r.Context().Value(middlewares.UserClaimsKey).(*authn.Claims)
 		if !ok {
@@ -207,7 +207,7 @@ func (h *Handler) GetCountryByName() http.HandlerFunc {
 }
 
 // Get cities by country id
-func (h *Handler) ListCitiesByCountryID() http.HandlerFunc {
+func (h *Handler) ListCitiesByCountryIDHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		_, ok := r.Context().Value(middlewares.UserClaimsKey).(*authn.Claims)
 		if !ok {

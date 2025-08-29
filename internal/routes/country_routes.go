@@ -13,12 +13,12 @@ func SetupCountryRoutes(mux *http.ServeMux, handler *handlers.Handler) {
 
 	// === COUNTRY ENDPOINTS ===
 	// Define country routes with method-based routing
-	userMux.Handle("GET /name/{name}", middlewares.AuthzMiddleware(http.HandlerFunc(handler.GetCountryByName())))
-	userMux.Handle("GET /{id}", middlewares.AuthzMiddleware(http.HandlerFunc(handler.GetCountryByID())))
-	userMux.Handle("GET /", middlewares.AuthzMiddleware(http.HandlerFunc(handler.ListCountries())))
+	userMux.Handle("GET /name/{name}", middlewares.AuthzMiddleware(http.HandlerFunc(handler.GetCountryByNameHandler())))
+	userMux.Handle("GET /{id}", middlewares.AuthzMiddleware(http.HandlerFunc(handler.GetCountryByIDHandler())))
+	userMux.Handle("GET /", middlewares.AuthzMiddleware(http.HandlerFunc(handler.ListCountriesHandler())))
 
 	// === CITY ENDPOINTS (nested under country) ===
-	userMux.Handle("GET /id/{id}/cities", middlewares.AuthzMiddleware(http.HandlerFunc(handler.ListCitiesByCountryID())))
+	userMux.Handle("GET /id/{id}/cities", middlewares.AuthzMiddleware(http.HandlerFunc(handler.ListCitiesByCountryIDHandler())))
 
 	// GUARD:
 	userMux.Handle("GET /id", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

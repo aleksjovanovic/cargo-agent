@@ -98,6 +98,23 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 	return i, err
 }
 
+const deleteUser = `-- name: DeleteUser :exec
+UPDATE users
+SET status = 'deleted',
+    updated = $2
+WHERE id = $1 AND status <> 'deleted'
+`
+
+type DeleteUserParams struct {
+	ID      int32        `json:"id"`
+	Updated sql.NullTime `json:"updated"`
+}
+
+func (q *Queries) DeleteUser(ctx context.Context, arg DeleteUserParams) error {
+	_, err := q.exec(ctx, q.deleteUserStmt, deleteUser, arg.ID, arg.Updated)
+	return err
+}
+
 const getCountryByID = `-- name: GetCountryByID :one
 SELECT id, name, code, alpha3_code, eu_member, continent
 FROM countries
@@ -142,6 +159,7 @@ const getUser = `-- name: GetUser :one
 SELECT id, username, email, name, country, city, legal_address, vat_number, status, language, created, updated
 FROM users
 WHERE id = $1
+AND status = 'active'
 `
 
 type GetUserRow struct {
@@ -182,7 +200,8 @@ func (q *Queries) GetUser(ctx context.Context, id int32) (GetUserRow, error) {
 const getUserByUsernameOrEmail = `-- name: GetUserByUsernameOrEmail :one
 SELECT id, username, password, email, name, country, city, legal_address, vat_number, status, language, created, updated
 FROM users
-WHERE username = $1 OR email=$1
+WHERE (username = $1 OR email=$1)
+AND status = 'active'
 `
 
 type GetUserByUsernameOrEmailRow struct {
@@ -226,6 +245,7 @@ const getUserPassword = `-- name: GetUserPassword :one
 SELECT password
 FROM users
 WHERE id = $1
+AND status = 'active'
 `
 
 func (q *Queries) GetUserPassword(ctx context.Context, id int32) (string, error) {
@@ -304,6 +324,7 @@ func (q *Queries) ListCountries(ctx context.Context) ([]Country, error) {
 const listUsers = `-- name: ListUsers :many
 SELECT id, username, email, name, country, city, legal_address, vat_number, status, language, created, updated
 FROM users
+WHERE status = 'active'
 ORDER BY id
 `
 
@@ -356,4 +377,80 @@ func (q *Queries) ListUsers(ctx context.Context) ([]ListUsersRow, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateUserProfile = `-- name: UpdateUserProfile :one
+UPDATE users
+SET
+  username      = COALESCE($1, username),
+  email         = COALESCE($2, email),
+  name          = COALESCE($3, name),
+  country       = COALESCE($4, country),
+  city          = COALESCE($5, city),
+  legal_address = COALESCE($6, legal_address),
+  vat_number    = COALESCE($7, vat_number),
+  language      = COALESCE($8, language),
+  updated       = COALESCE($9, updated)
+WHERE id = $10
+AND status ='active'
+RETURNING id, username, email, name, country, city, legal_address, vat_number, status, language, created, updated
+`
+
+type UpdateUserProfileParams struct {
+	Username     sql.NullString `json:"username"`
+	Email        sql.NullString `json:"email"`
+	Name         sql.NullString `json:"name"`
+	Country      sql.NullString `json:"country"`
+	City         sql.NullString `json:"city"`
+	LegalAddress sql.NullString `json:"legal_address"`
+	VatNumber    sql.NullString `json:"vat_number"`
+	Language     sql.NullString `json:"language"`
+	Updated      sql.NullTime   `json:"updated"`
+	ID           int32          `json:"id"`
+}
+
+type UpdateUserProfileRow struct {
+	ID           int32             `json:"id"`
+	Username     string            `json:"username"`
+	Email        string            `json:"email"`
+	Name         string            `json:"name"`
+	Country      string            `json:"country"`
+	City         string            `json:"city"`
+	LegalAddress string            `json:"legal_address"`
+	VatNumber    string            `json:"vat_number"`
+	Status       models.UserStatus `json:"status"`
+	Language     string            `json:"language"`
+	Created      sql.NullTime      `json:"created"`
+	Updated      sql.NullTime      `json:"updated"`
+}
+
+func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) (UpdateUserProfileRow, error) {
+	row := q.queryRow(ctx, q.updateUserProfileStmt, updateUserProfile,
+		arg.Username,
+		arg.Email,
+		arg.Name,
+		arg.Country,
+		arg.City,
+		arg.LegalAddress,
+		arg.VatNumber,
+		arg.Language,
+		arg.Updated,
+		arg.ID,
+	)
+	var i UpdateUserProfileRow
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.Email,
+		&i.Name,
+		&i.Country,
+		&i.City,
+		&i.LegalAddress,
+		&i.VatNumber,
+		&i.Status,
+		&i.Language,
+		&i.Created,
+		&i.Updated,
+	)
+	return i, err
 }

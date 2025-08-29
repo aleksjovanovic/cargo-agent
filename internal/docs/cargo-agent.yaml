@@ -76,6 +76,118 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /users/signup:
+    post:
+      tags:
+        - Auth
+      summary: Sign up
+      description: Creates a new user account.
+      operationId: signup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+            examples:
+              sample:
+                value:
+                  username: johndoe
+                  email: john.doe@example.com
+                  password: StrongPass!23
+                  name: John Doe
+                  country: RS
+                  city: Nis
+                  legal_address: "Some street 10, 18000 Nis"
+                  vat_number: "RS123456789"
+                  status: active
+                  language: en
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateUserSuccessResponse'
+              examples:
+                created:
+                  value:
+                    message: User created successfully
+                    data:
+                      id: 101
+                      username: johndoe
+                      email: john.doe@example.com
+                      name: John Doe
+                      country: RS
+                      city: Nis
+                      legal_address: "Some street 10, 18000 Nis"
+                      vat_number: "RS123456789"
+                      status: active
+                      language: en
+                      created: "2025-08-29T09:30:00Z"
+                      updated: "2025-08-29T09:30:00Z"
+        '400':
+          description: Invalid request payload or validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalid_payload:
+                  value:
+                    error: invalid_payload
+                    message: Invalid request payload
+                    details: null
+                bad_request:
+                  value:
+                    error: bad_request
+                    message: "username is required"
+                    details: null
+        '409':
+          description: Username or email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                username_exists:
+                  value:
+                    error: username_exists
+                    message: Username already exists
+                    details: null
+                email_exists:
+                  value:
+                    error: email_exists
+                    message: Email already exists
+                    details: null
+        '500':
+          description: Internal error while creating user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                transaction_start_failed:
+                  value:
+                    error: transaction_start_failed
+                    message: Failed to start transaction
+                    details: null
+                password_hash_failed:
+                  value:
+                    error: password_hash_failed
+                    message: Failed to hash password
+                    details: null
+                user_creation_failed:
+                  value:
+                    error: user_creation_failed
+                    message: Failed to create user
+                    details: null
+                transaction_commit_failed:
+                  value:
+                    error: transaction_commit_failed
+                    message: Failed to commit transaction
+                    details: null
+
   /users/profile:
     get:
       tags:
@@ -132,6 +244,195 @@ paths:
                   value:
                     error: not_found
                     message: User not found
+                    details: null
+
+    patch:
+      tags:
+        - User
+      summary: Update current user's profile
+      description: Partially updates the authenticated user's profile. At least one field must be provided. Requires a valid JWT token.
+      operationId: updateUserProfile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserProfileRequest'
+            examples:
+              sample_partial:
+                value:
+                  name: "New Name"
+                  city: "Novi Sad"
+              sample_full:
+                value:
+                  username: "newusername"
+                  email: "new.email@example.com"
+                  name: "New Name"
+                  country: "RS"
+                  city: "Nis"
+                  legal_address: "Some street 10, 18000 Nis"
+                  vat_number: "RS123456789"
+                  language: "en"
+      responses:
+        '200':
+          description: User profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileSuccessResponse'
+              examples:
+                ok:
+                  value:
+                    message: User profile updated successfully
+                    data:
+                      id: 123
+                      username: newusername
+                      email: new.email@example.com
+                      name: New Name
+                      country: RS
+                      city: Nis
+                      legal_address: "Some street 10, 18000 Nis"
+                      vat_number: "RS123456789"
+                      status: active
+                      language: en
+                      created: "2025-08-21T10:15:30Z"
+                      updated: "2025-08-29T10:30:00Z"
+        '400':
+          description: Invalid payload, validation failed, or no fields to update
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalid_payload:
+                  value:
+                    error: invalid_payload
+                    message: Invalid request payload
+                    details: null
+                bad_request:
+                  value:
+                    error: bad_request
+                    message: "username must be between 3 and 150 characters long"
+                    details: null
+                no_changes:
+                  value:
+                    error: no_changes
+                    message: No fields to update.
+                    details: null
+        '401':
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                unauthorized:
+                  value:
+                    error: unauthorized
+                    message: Please log in to continue
+                    details: null
+        '409':
+          description: Username or email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                username_exists:
+                  value:
+                    error: username_exists
+                    message: Username already exists
+                    details: null
+                email_exists:
+                  value:
+                    error: email_exists
+                    message: Email already exists
+                    details: null
+        '500':
+          description: Update failed (database or server error)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                user_update_failed:
+                  value:
+                    error: user_update_failed
+                    message: Failed to update user profile
+                    details: null
+                transaction_commit_failed:
+                  value:
+                    error: transaction_commit_failed
+                    message: Failed to commit transaction
+                    details: null
+
+  /users/{id}:
+    delete:
+      tags:
+        - User
+      summary: Soft delete user
+      description: Marks the user as deleted (soft delete via status) and updates the timestamp.
+      operationId: deleteUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: User ID (integer)
+          schema:
+            type: integer
+            format: int32
+          example: 42
+      responses:
+        '200':
+          description: User deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteUserSuccessResponse'
+              examples:
+                ok:
+                  value:
+                    message: User deleted successfully
+                    data: null
+        '400':
+          description: Invalid ID (must be an integer)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalid_id:
+                  value:
+                    error: invalid_id
+                    message: ID must be a valid integer
+                    details: null
+        '401':
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                unauthorized:
+                  value:
+                    error: unauthorized
+                    message: Please log in to continue
+                    details: null
+        '500':
+          description: Delete failed (database or server error)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                delete_user_failed:
+                  value:
+                    error: delete_user_failed
+                    message: Failed to delete user
                     details: null
 
   /countries:
@@ -468,6 +769,90 @@ components:
               description: JWT access token
               example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
+    CreateUserRequest:
+      type: object
+      required:
+        - username
+        - email
+        - password
+      properties:
+        username:
+          type: string
+          example: johndoe
+        email:
+          type: string
+          format: email
+          example: john.doe@example.com
+        password:
+          type: string
+          format: password
+          example: StrongPass!23
+        name:
+          type: string
+          example: John Doe
+        country:
+          type: string
+          example: RS
+        city:
+          type: string
+          example: Nis
+        legal_address:
+          type: string
+          example: "Some street 10, 18000 Nis"
+        vat_number:
+          type: string
+          example: "RS123456789"
+        status:
+          type: string
+          description: User status
+          enum: [active, inactive, blocked]
+          example: active
+        language:
+          type: string
+          example: en
+
+    CreateUserSuccessResponse:
+      type: object
+      required:
+        - message
+        - data
+      properties:
+        message:
+          type: string
+          example: User created successfully
+        data:
+          $ref: '#/components/schemas/User'
+
+    UpdateUserProfileRequest:
+      type: object
+      description: At least one field must be provided. Omitted fields are not changed.
+      properties:
+        username:
+          type: string
+          example: newusername
+        email:
+          type: string
+          format: email
+          example: new.email@example.com
+        name:
+          type: string
+          example: New Name
+        country:
+          type: string
+          example: RS
+        city:
+          type: string
+          example: Nis
+        legal_address:
+          type: string
+          example: "Some street 10, 18000 Nis"
+        vat_number:
+          type: string
+          example: "RS123456789"
+        language:
+          type: string
+          example: en
+
     User:
       type: object
       properties:
@@ -618,6 +1003,19 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/City'
+
+    DeleteUserSuccessResponse:
+      type: object
+      required:
+        - message
+        - data
+      properties:
+        message:
+          type: string
+          example: User deleted successfully
+        data:
+          nullable: true
+          example: null
 
     ErrorResponse:
       type: object

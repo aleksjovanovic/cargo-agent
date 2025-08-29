@@ -30,6 +30,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.createUserStmt, err = db.PrepareContext(ctx, createUser); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateUser: %w", err)
 	}
+	if q.deleteUserStmt, err = db.PrepareContext(ctx, deleteUser); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteUser: %w", err)
+	}
 	if q.getCountryByIDStmt, err = db.PrepareContext(ctx, getCountryByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetCountryByID: %w", err)
 	}
@@ -54,6 +57,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.listUsersStmt, err = db.PrepareContext(ctx, listUsers); err != nil {
 		return nil, fmt.Errorf("error preparing query ListUsers: %w", err)
 	}
+	if q.updateUserProfileStmt, err = db.PrepareContext(ctx, updateUserProfile); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateUserProfile: %w", err)
+	}
 	return &q, nil
 }
 
@@ -67,6 +73,11 @@ func (q *Queries) Close() error {
 	if q.createUserStmt != nil {
 		if cerr := q.createUserStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing createUserStmt: %w", cerr)
+		}
+	}
+	if q.deleteUserStmt != nil {
+		if cerr := q.deleteUserStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteUserStmt: %w", cerr)
 		}
 	}
 	if q.getCountryByIDStmt != nil {
@@ -107,6 +118,11 @@ func (q *Queries) Close() error {
 	if q.listUsersStmt != nil {
 		if cerr := q.listUsersStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing listUsersStmt: %w", cerr)
+		}
+	}
+	if q.updateUserProfileStmt != nil {
+		if cerr := q.updateUserProfileStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateUserProfileStmt: %w", cerr)
 		}
 	}
 	return err
@@ -150,6 +166,7 @@ type Queries struct {
 	tx                           *sql.Tx
 	changePasswordStmt           *sql.Stmt
 	createUserStmt               *sql.Stmt
+	deleteUserStmt               *sql.Stmt
 	getCountryByIDStmt           *sql.Stmt
 	getCountryByNameStmt         *sql.Stmt
 	getUserStmt                  *sql.Stmt
@@ -158,6 +175,7 @@ type Queries struct {
 	listCitiesByCountryIDStmt    *sql.Stmt
 	listCountriesStmt            *sql.Stmt
 	listUsersStmt                *sql.Stmt
+	updateUserProfileStmt        *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
@@ -166,6 +184,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		tx:                           tx,
 		changePasswordStmt:           q.changePasswordStmt,
 		createUserStmt:               q.createUserStmt,
+		deleteUserStmt:               q.deleteUserStmt,
 		getCountryByIDStmt:           q.getCountryByIDStmt,
 		getCountryByNameStmt:         q.getCountryByNameStmt,
 		getUserStmt:                  q.getUserStmt,
@@ -174,5 +193,6 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		listCitiesByCountryIDStmt:    q.listCitiesByCountryIDStmt,
 		listCountriesStmt:            q.listCountriesStmt,
 		listUsersStmt:                q.listUsersStmt,
+		updateUserProfileStmt:        q.updateUserProfileStmt,
 	}
 }

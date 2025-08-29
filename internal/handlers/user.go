@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/aleksjovanovic/cargo-agent/internal/authn"
@@ -19,7 +20,7 @@ import (
 )
 
 // User profile
-func (h *Handler) UserProfile() http.HandlerFunc {
+func (h *Handler) UserProfileHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		claims, ok := r.Context().Value(middlewares.UserClaimsKey).(*authn.Claims)
 		if !ok {
@@ -82,7 +83,7 @@ func (h *Handler) UserProfile() http.HandlerFunc {
 }
 
 // Change user password
-func (h *Handler) ChangePassword() http.HandlerFunc {
+func (h *Handler) ChangePasswordHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		now := time.Now()
@@ -281,7 +282,7 @@ func (h *Handler) LoginUserHandler() http.HandlerFunc {
 	}
 }
 
-// CreateUserHandler with Transactions
+// Create user with transactions
 func (h *Handler) CreateUserHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
@@ -325,8 +326,6 @@ func (h *Handler) CreateUserHandler() http.HandlerFunc {
 			return
 		}
 		defer tx.Rollback()
-
-		// Create a new Queries instance bound to the transaction
 		qtx := store.New(tx)
 
 		// Check if the username already exists
@@ -416,5 +415,213 @@ func (h *Handler) CreateUserHandler() http.HandlerFunc {
 			},
 		)
 
+	}
+}
+
+// Update user with transactions
+func (h *Handler) UpdateUserProfileHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		now := time.Now()
+
+		claims, ok := r.Context().Value(middlewares.UserClaimsKey).(*authn.Claims)
+		if !ok {
+			response.RespondWithError(
+				w,
+				http.StatusUnauthorized,
+				"unauthorized",
+				"Please log in to continue",
+				nil,
+			)
+			return
+		}
+
+		userID := int32(claims.UserID)
+
+		// User request (dataTransportObject)
+		var req request.UpdateUserProfileRequest
+		if err := utils.DecodeJSONBody(w, r, &req, 1<<20); err != nil {
+			if je, ok := err.(*utils.JSONError); ok {
+				response.RespondWithError(w, je.Status, "invalid_payload", je.Msg, nil)
+			} else {
+				response.RespondWithError(w, http.StatusBadRequest, "invalid_payload", "Invalid request payload.", nil)
+			}
+			return
+		}
+
+		if req.Username == nil && req.Email == nil && req.Name == nil && req.Country == nil &&
+			req.City == nil && req.LegalAddress == nil && req.VatNumber == nil && req.Language == nil {
+			response.RespondWithError(
+				w,
+				http.StatusBadRequest,
+				"no_changes",
+				"No fields to update.",
+				nil)
+			return
+		}
+
+		// Validate the request
+		if err := validation.ValidateUpdateUserProfileRequest(&req); err != nil {
+			response.RespondWithError(
+				w,
+				http.StatusBadRequest,
+				"bad_request",
+				err.Error(),
+				nil,
+			)
+			return
+		}
+
+		// Start a transaction
+		tx, err := h.DB.BeginTx(ctx, nil)
+		if err != nil {
+			response.RespondWithError(
+				w,
+				http.StatusInternalServerError,
+				"transaction_start_failed",
+				"Failed to start transaction",
+				nil,
+			)
+			return
+		}
+		defer tx.Rollback()
+		qtx := store.New(tx)
+
+		// Check if the username already exists
+		if req.Username != nil && *req.Username != "" {
+			_, err = qtx.GetUserByUsernameOrEmail(ctx, *req.Username)
+			if err == nil {
+				response.RespondWithError(
+					w,
+					http.StatusConflict,
+					"username_exists",
+					"Username already exists",
+					nil,
+				)
+				return
+			}
+		}
+
+		// Check if the email already exists
+		if req.Email != nil && *req.Email != "" {
+			_, err = qtx.GetUserByUsernameOrEmail(ctx, *req.Email)
+			if err == nil {
+				response.RespondWithError(
+					w,
+					http.StatusConflict,
+					"email_exists",
+					"Email already exists",
+					nil,
+				)
+
+				return
+			}
+		}
+
+		// Update user within the transaction
+		updatedUser, err := qtx.UpdateUserProfile(ctx, store.UpdateUserProfileParams{
+			ID:           userID,
+			Username:     utils.ToNullString(req.Username),
+			Email:        utils.ToNullString(req.Email),
+			Name:         utils.ToNullString(req.Name),
+			Country:      utils.ToNullString(req.Country),
+			City:         utils.ToNullString(req.City),
+			LegalAddress: utils.ToNullString(req.LegalAddress),
+			VatNumber:    utils.ToNullString(req.VatNumber),
+			Language:     utils.ToNullString(req.Language),
+			Updated:      sql.NullTime{Time: now, Valid: true},
+		})
+		if err != nil {
+			response.RespondWithError(
+				w,
+				http.StatusInternalServerError,
+				"user_update_failed",
+				"Failed to update user profile",
+				nil,
+			)
+			return
+		}
+
+		// Commit the transaction if all operations succeed
+		if err := tx.Commit(); err != nil {
+			response.RespondWithError(
+				w,
+				http.StatusInternalServerError,
+				"transaction_commit_failed",
+				"Failed to commit transaction",
+				nil,
+			)
+			return
+		}
+
+		// Bust cache
+		_ = h.Redis.Del(ctx, fmt.Sprintf("user:%d", userID)).Err()
+
+		response.RespondWithSuccess(
+			w,
+			http.StatusCreated,
+			response.Envelope{
+				"message": "User profile updated successfully",
+				"data":    updatedUser,
+			},
+		)
+
+	}
+}
+
+func (h *Handler) DeleteUserHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		now := time.Now()
+
+		_, ok := r.Context().Value(middlewares.UserClaimsKey).(*authn.Claims)
+		if !ok {
+			response.RespondWithError(
+				w,
+				http.StatusUnauthorized,
+				"unauthorized",
+				"Please log in to continue",
+				nil,
+			)
+			return
+		}
+
+		id := r.PathValue("id")
+		userID, err := strconv.ParseInt(id, 10, 32)
+		if err != nil {
+			response.RespondWithError(
+				w,
+				http.StatusBadRequest,
+				"invalid_id",
+				"ID must be a valid integer",
+				nil,
+			)
+			return
+		}
+
+		// Delete user within
+		err = h.Queries.DeleteUser(ctx, store.DeleteUserParams{
+			ID:      int32(userID),
+			Updated: sql.NullTime{Time: now, Valid: true},
+		})
+		if err != nil {
+			response.RespondWithError(
+				w,
+				http.StatusInternalServerError,
+				"delete_user_failed",
+				"Failed to delete user",
+				nil,
+			)
+			return
+		}
+
+		response.RespondWithSuccess(
+			w,
+			http.StatusOK,
+			response.Envelope{
+				"message": "User deleted successfully",
+				"data":    nil,
+			},
+		)
 	}
 }
