@@ -19,9 +19,10 @@ type User struct {
 	Country      string     `json:"country"`
 	City         string     `json:"city"`
 	LegalAddress string     `json:"legal_address"`
-	VatNumber    int        `json:"vat_number"`
+	VatNumber    string     `json:"vat_number"`
 	Status       UserStatus `json:"status"`
 	Language     string     `json:"language"`
-	Created      string     `json:"created"`
-	Updated      string     `json:"updated"`
+	Created      string     `json:"created_at"`
+	Updated      string     `json:"updated_at"`
+	Deleted      string     `json:"deleted_at"`
 }

@@ -276,7 +276,7 @@ paths:
                   vat_number: "RS123456789"
                   language: "en"
       responses:
-        '200':
+        '201':
           description: User profile updated successfully
           content:
             application/json:
@@ -366,6 +366,91 @@ paths:
                   value:
                     error: transaction_commit_failed
                     message: Failed to commit transaction
+                    details: null
+
+  /users/me/password:
+    put:
+      tags:
+        - User
+        - Auth
+      summary: Change current user's password
+      description: Requires a valid JWT token and the correct old password.
+      operationId: changeMyPassword
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+            examples:
+              sample:
+                value:
+                  old_password: "DemoPass123!"
+                  new_password: "NewStrong!234"
+      responses:
+        '200':
+          description: Password updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteUserSuccessResponse'
+              examples:
+                ok:
+                  value:
+                    message: Password updated successfully
+                    data: null
+        '400':
+          description: Invalid payload or weak password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalid_payload:
+                  value:
+                    error: invalid_payload
+                    message: Invalid request payload
+                    details: null
+                bad_request:
+                  value:
+                    error: bad_request
+                    message: "new password must be at least 8 characters long"
+                    details: null
+        '401':
+          description: Unauthorized or invalid old password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                unauthorized:
+                  value:
+                    error: unauthorized
+                    message: Please log in to continue
+                    details: null
+                invalid_old_password:
+                  value:
+                    error: invalid_old_password
+                    message: Old password is incorrect
+                    details: null
+        '500':
+          description: Internal error while changing password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                password_hash_failed:
+                  value:
+                    error: password_hash_failed
+                    message: Failed to hash new password
+                    details: null
+                pasword_update_failed:
+                  value:
+                    error: pasword_update_failed
+                    message: Failed to change password
                     details: null
 
   /users/{id}:
@@ -769,6 +854,21 @@ components:
               description: JWT access token
               example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
+    ChangePasswordRequest:
+      type: object
+      required:
+        - old_password
+        - new_password
+      properties:
+        old_password:
+          type: string
+          format: password
+          example: DemoPass123!
+        new_password:
+          type: string
+          format: password
+          example: NewStrong!234
+
     CreateUserRequest:
       type: object
       required:
@@ -805,7 +905,7 @@ components:
         status:
           type: string
           description: User status
-          enum: [active, inactive, blocked]
+          enum: [active, inactive, suspended, deleted, draft]
           example: active
         language:
           type: string
@@ -884,7 +984,7 @@ components:
           example: "RS123456789"
         status:
           type: string
-          description: User status (e.g., active, inactive, blocked)
+          description: User status (e.g., active, inactive, suspended, deleted, draft)
           example: active
         language:
           type: string

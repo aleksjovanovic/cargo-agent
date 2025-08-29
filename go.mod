@@ -3,7 +3,7 @@ module github.com/aleksjovanovic/cargo-agent
 go 1.25.0
 
 require (
-	github.com/dgrijalva/jwt-go v3.2.0+incompatible
+	github.com/golang-jwt/jwt/v4 v4.5.2
 	github.com/joho/godotenv v1.5.1
 	github.com/lib/pq v1.10.9
 	github.com/redis/go-redis/v9 v9.12.1

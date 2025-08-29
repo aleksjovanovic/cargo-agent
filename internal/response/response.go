@@ -54,19 +54,13 @@ func RespondWithSuccess(w http.ResponseWriter, status int, payload any, opts ...
 	JSON(w, status, payload, opts...)
 }
 
-type AppError struct {
-	Code    string `json:"code"`
-	Message string `json:"message"`
-	Details any    `json:"details,omitempty"`
-}
-
 func RespondWithError(w http.ResponseWriter, status int, code, message string, details any, opts ...Option) {
 	errBody := Envelope{
-		"error": AppError{
-			Code:    code,
-			Message: message,
-			Details: details,
-		},
+		"error":   code,    // flatten kao u swaggeru
+		"message": message, // flatten
+	}
+	if details != nil {
+		errBody["details"] = details
 	}
 	JSON(w, status, errBody, opts...)
 }

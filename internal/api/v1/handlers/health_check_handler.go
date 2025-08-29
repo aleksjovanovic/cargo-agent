@@ -8,9 +8,8 @@ import (
 func (h *Handler) HealthCheckHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		response := map[string]string{
+		_ = json.NewEncoder(w).Encode(map[string]string{
 			"message": "Server is OK",
-		}
-		json.NewEncoder(w).Encode(response)
+		})
 	}
 }

@@ -2,79 +2,97 @@ package middlewares
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"os"
 	"strings"
 
 	"github.com/aleksjovanovic/cargo-agent/internal/authn"
 	"github.com/aleksjovanovic/cargo-agent/internal/response"
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt/v4"
 )
 
-// Custom type context for context key to avoid collision
 type contextKey string
 
-// Constant used in storing user claims
 const UserClaimsKey contextKey = "claims"
+
+func bearerToken(r *http.Request) (string, error) {
+	h := r.Header.Get("Authorization")
+	if h == "" {
+		return "", errors.New("no_token")
+	}
+	parts := strings.Fields(h)
+
+	if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") || parts[1] == "" {
+		return "", errors.New("invalid_auth_header")
+	}
+	return parts[1], nil
+}
 
 func AuthzMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		//Retrieves the authorization header from the request
-		authzHeader := r.Header.Get("Authorization")
-		if authzHeader == "" {
-			response.RespondWithError(
-				w,
-				http.StatusUnauthorized,
-				"no_token",
-				"No token provided",
-				nil,
-			)
-			return
-		}
-		// strips the Berarer from the Bearer token
-		tokenString := strings.TrimPrefix(authzHeader, "Bearer ")
-		claims := &authn.Claims{}
-
-		// Parse the token and validate it
-		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (any, error) {
-			return []byte(os.Getenv("JWT_SECRET_KEY")), nil
-		})
+		tokenStr, err := bearerToken(r)
 		if err != nil {
-			if err == jwt.ErrSignatureInvalid {
-				response.RespondWithError(
-					w,
-					http.StatusBadRequest,
-					"invalid_token_signature",
-					"Invalid token signature",
-					nil,
-				)
-
+			if err.Error() == "no_token" {
+				w.Header().Set("WWW-Authenticate", `Bearer realm="cargo-agent", error="invalid_token", error_description="No token provided"`)
+				response.RespondWithError(w, http.StatusUnauthorized, "no_token", "No token provided", nil)
 				return
 			}
-			response.RespondWithError(
-				w,
-				http.StatusBadRequest,
-				"invalid_token",
-				"Invalid token",
-				nil,
-			)
-
+			w.Header().Set("WWW-Authenticate", `Bearer realm="cargo-agent", error="invalid_request", error_description="Malformed Authorization header"`)
+			response.RespondWithError(w, http.StatusUnauthorized, "invalid_auth_header", "Invalid Authorization header", nil)
 			return
 		}
-		// if token is valid, store th claims in the request context
-		if token.Valid {
-			ctx := context.WithValue(r.Context(), UserClaimsKey, claims)
-			r := r.WithContext(ctx)
-			next.ServeHTTP(w, r)
-		} else {
-			response.RespondWithError(
-				w,
-				http.StatusUnauthorized,
-				"invalid_token",
-				"Invalid token",
-				nil,
-			)
 
+		secret := os.Getenv("JWT_SECRET_KEY")
+		if secret == "" {
+			response.RespondWithError(w, http.StatusInternalServerError, "server_misconfigured", "JWT secret is not configured", nil)
+			return
 		}
+
+		keyFunc := func(token *jwt.Token) (any, error) {
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok || token.Method.Alg() != jwt.SigningMethodHS256.Alg() {
+				return nil, jwt.ErrTokenUnverifiable
+			}
+			return []byte(secret), nil
+		}
+
+		claims := &authn.Claims{}
+		parsed, err := jwt.ParseWithClaims(
+			tokenStr,
+			claims,
+			keyFunc,
+			jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}),
+			// jwt.WithLeeway(30*time.Second),
+		)
+		if err != nil {
+			var ve *jwt.ValidationError
+			if errors.As(err, &ve) {
+				switch {
+				case ve.Errors&jwt.ValidationErrorExpired != 0:
+					w.Header().Set("WWW-Authenticate", `Bearer error="invalid_token", error_description="Token expired"`)
+					response.RespondWithError(w, http.StatusUnauthorized, "token_expired", "Token has expired", nil)
+					return
+				case ve.Errors&jwt.ValidationErrorNotValidYet != 0:
+					response.RespondWithError(w, http.StatusUnauthorized, "token_not_valid_yet", "Token not valid yet", nil)
+					return
+				case ve.Errors&jwt.ValidationErrorSignatureInvalid != 0:
+					response.RespondWithError(w, http.StatusUnauthorized, "invalid_token_signature", "Invalid token signature", nil)
+					return
+				default:
+					response.RespondWithError(w, http.StatusUnauthorized, "invalid_token", "Invalid token", nil)
+					return
+				}
+			}
+			response.RespondWithError(w, http.StatusUnauthorized, "invalid_token", "Invalid token", nil)
+			return
+		}
+
+		if !parsed.Valid {
+			response.RespondWithError(w, http.StatusUnauthorized, "invalid_token", "Invalid token", nil)
+			return
+		}
+
+		ctx := context.WithValue(r.Context(), UserClaimsKey, claims)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

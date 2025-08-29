@@ -6,7 +6,10 @@ import (
 	"unicode"
 
 	"github.com/aleksjovanovic/cargo-agent/internal/dtos/request"
+	"github.com/aleksjovanovic/cargo-agent/internal/models"
 )
+
+// ========== CREATE USER ==========
 
 func ValidateCreateUserRequest(req *request.CreateUserRequest) error {
 	var errs []string
@@ -23,21 +26,21 @@ func ValidateCreateUserRequest(req *request.CreateUserRequest) error {
 		}
 	}
 
-	// Username: required, 3-150 characters
+	// Username: required, 3-150
 	if v := trim(req.Username); v == "" {
 		errs = append(errs, "username is required")
 	} else {
 		minMax("username", v, 3, 150)
 	}
 
-	// Email: required + custom struktura (x@y.z)
+	// Email: required + basic format
 	if v := trim(req.Email); v == "" {
 		errs = append(errs, "email is required")
 	} else if !isEmailValidBasic(v) {
 		errs = append(errs, "email must be in a valid format (e.g. name@example.com)")
 	}
 
-	// Password: required, min 8 characters, at least 1 uppercase, 1 lowercase, 1 number, 1 special character
+	// Password: required, policy
 	if v := trim(req.Password); v == "" {
 		errs = append(errs, "password is required")
 	} else {
@@ -71,55 +74,58 @@ func ValidateCreateUserRequest(req *request.CreateUserRequest) error {
 		}
 	}
 
-	// Name: required, 3-150 characters
+	// Name: required, 3-150
 	if v := trim(req.Name); v == "" {
 		errs = append(errs, "name is required")
 	} else {
 		minMax("name", v, 3, 150)
 	}
 
-	// Country: required, exactly 2 characters
+	// Country: required, exactly 2 chars
 	if v := trim(req.Country); v == "" {
 		errs = append(errs, "country is required")
 	} else {
 		exact("country", v, 2)
 	}
 
-	// City: required, 3-100 characters
+	// City: required, 3-100
 	if v := trim(req.City); v == "" {
 		errs = append(errs, "city is required")
 	} else {
 		minMax("city", v, 3, 100)
 	}
 
-	// LegalAddress: required, 3-100 characters
+	// LegalAddress: required, 3-100
 	if v := trim(req.LegalAddress); v == "" {
 		errs = append(errs, "legal_address is required")
 	} else {
 		minMax("legal_address", v, 3, 100)
 	}
 
-	// VatNumber: required, 3-30 characters
+	// VatNumber: required, 3-30
 	if v := trim(req.VatNumber); v == "" {
 		errs = append(errs, "vat_number is required")
 	} else {
 		minMax("vat_number", v, 3, 30)
 	}
 
-	// Status: required, 5-10 characters, enum(active, inactive, suspended, deleted, or draft)
+	// Status: required, enum (koristimo models konstante)
 	if v := trim(req.Status); v == "" {
-		errs = append(errs, "status jis required")
+		errs = append(errs, "status is required")
 	} else {
-		minMax("status", v, 5, 10)
 		switch v {
-		case "active", "inactive", "suspended", "deleted", "draft":
+		case string(models.UserStatusActive),
+			string(models.UserStatusInactive),
+			string(models.UserStatusSuspended),
+			string(models.UserStatusDeleted),
+			string(models.UserStatusDraft):
 			// ok
 		default:
-			errs = append(errs, "status must be one of the following values: active, inactive, suspended, deleted, or draft")
+			errs = append(errs, "status must be one of: active, inactive, suspended, deleted, draft")
 		}
 	}
 
-	// Language: required, exactly 2 characters
+	// Language: required, exactly 2
 	if v := trim(req.Language); v == "" {
 		errs = append(errs, "language is required")
 	} else {
@@ -127,10 +133,12 @@ func ValidateCreateUserRequest(req *request.CreateUserRequest) error {
 	}
 
 	if len(errs) > 0 {
-		return fmt.Errorf(strings.Join(errs, ", "))
+		return fmt.Errorf(strings.Join(errs, "; "))
 	}
 	return nil
 }
+
+// ========== UPDATE USER (partial) ==========
 
 func ValidateUpdateUserProfileRequest(req *request.UpdateUserProfileRequest) error {
 	if req == nil {
@@ -156,7 +164,7 @@ func ValidateUpdateUserProfileRequest(req *request.UpdateUserProfileRequest) err
 		}
 	}
 
-	// Username: ako je poslato, ne sme biti prazno; 3-150
+	// Username: optional, non-empty, 3-150
 	if v, ok := trim(req.Username); ok {
 		if v == "" {
 			errs = append(errs, "username cannot be empty")
@@ -165,7 +173,7 @@ func ValidateUpdateUserProfileRequest(req *request.UpdateUserProfileRequest) err
 		}
 	}
 
-	// Email: ako je poslato, ne sme biti prazno i mora validan format
+	// Email: optional, format
 	if v, ok := trim(req.Email); ok {
 		if v == "" {
 			errs = append(errs, "email cannot be empty")
@@ -174,7 +182,7 @@ func ValidateUpdateUserProfileRequest(req *request.UpdateUserProfileRequest) err
 		}
 	}
 
-	// Name: ako je poslato, ne sme biti prazno; 3-150
+	// Name: optional, 3-150
 	if v, ok := trim(req.Name); ok {
 		if v == "" {
 			errs = append(errs, "name cannot be empty")
@@ -183,7 +191,7 @@ func ValidateUpdateUserProfileRequest(req *request.UpdateUserProfileRequest) err
 		}
 	}
 
-	// Country: ako je poslato, ne sme biti prazno; tačno 2 char
+	// Country: optional, exactly 2
 	if v, ok := trim(req.Country); ok {
 		if v == "" {
 			errs = append(errs, "country cannot be empty")
@@ -192,7 +200,7 @@ func ValidateUpdateUserProfileRequest(req *request.UpdateUserProfileRequest) err
 		}
 	}
 
-	// City: ako je poslato, ne sme biti prazno; 3-100
+	// City: optional, 3-100
 	if v, ok := trim(req.City); ok {
 		if v == "" {
 			errs = append(errs, "city cannot be empty")
@@ -201,7 +209,7 @@ func ValidateUpdateUserProfileRequest(req *request.UpdateUserProfileRequest) err
 		}
 	}
 
-	// LegalAddress: ako je poslato, ne sme biti prazno; 3-100
+	// LegalAddress: optional, 3-100
 	if v, ok := trim(req.LegalAddress); ok {
 		if v == "" {
 			errs = append(errs, "legal_address cannot be empty")
@@ -210,7 +218,7 @@ func ValidateUpdateUserProfileRequest(req *request.UpdateUserProfileRequest) err
 		}
 	}
 
-	// VatNumber: ako je poslato, ne sme biti prazno; 3-30
+	// VatNumber: optional, 3-30
 	if v, ok := trim(req.VatNumber); ok {
 		if v == "" {
 			errs = append(errs, "vat_number cannot be empty")
@@ -219,7 +227,7 @@ func ValidateUpdateUserProfileRequest(req *request.UpdateUserProfileRequest) err
 		}
 	}
 
-	// Language: ako je poslato, ne sme biti prazno; tačno 2 char
+	// Language: optional, exactly 2
 	if v, ok := trim(req.Language); ok {
 		if v == "" {
 			errs = append(errs, "language cannot be empty")
@@ -234,25 +242,26 @@ func ValidateUpdateUserProfileRequest(req *request.UpdateUserProfileRequest) err
 	return nil
 }
 
+// ========== LOGIN ==========
+
 func ValidateLoginRequest(req request.LoginRequest) error {
 	var errs []string
 
-	// Username/Email required
 	if strings.TrimSpace(req.Username) == "" {
-		errs = append(errs, "username or email is required")
+		// u tvojoj šemi “Username” polje nosi i username ili email → poruka to jasno kaže
+		errs = append(errs, "username/email is required")
 	}
-
-	// Password required
 	if strings.TrimSpace(req.Password) == "" {
 		errs = append(errs, "password is required")
 	}
 
 	if len(errs) > 0 {
-		return fmt.Errorf(strings.Join(errs, ", "))
+		return fmt.Errorf(strings.Join(errs, "; "))
 	}
-
 	return nil
 }
+
+// ========== Helpers ==========
 
 func isEmailValidBasic(email string) bool {
 	email = strings.TrimSpace(email)
@@ -292,23 +301,19 @@ func isEmailValidBasic(email string) bool {
 			return false
 		}
 	}
-
 	for _, r := range domain {
 		if !(unicode.IsLetter(r) || unicode.IsDigit(r) || r == '.' || r == '-') {
 			return false
 		}
 	}
-
 	return true
 }
 
 func ValidateChangePasswordRequest(newPassword string) error {
 	var errs []string
 
-	trim := func(s string) string { return strings.TrimSpace(s) }
-
-	// Password: required, min 8 characters, at least 1 uppercase, 1 lowercase, 1 number, 1 special character
-	if v := trim(newPassword); v == "" {
+	v := strings.TrimSpace(newPassword)
+	if v == "" {
 		errs = append(errs, "new password is required")
 	} else {
 		if len(v) < 8 {
@@ -342,7 +347,7 @@ func ValidateChangePasswordRequest(newPassword string) error {
 	}
 
 	if len(errs) > 0 {
-		return fmt.Errorf(strings.Join(errs, ", "))
+		return fmt.Errorf(strings.Join(errs, "; "))
 	}
 	return nil
 }

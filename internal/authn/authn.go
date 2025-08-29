@@ -1,45 +1,63 @@
 package authn
 
 import (
+	"errors"
 	"time"
 
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt/v4"
 )
 
 type Claims struct {
 	UserID   int64  `json:"user_id"`
 	Username string `json:"user_name"`
-	jwt.StandardClaims
+	jwt.RegisteredClaims
+}
+
+type Options struct {
+	Issuer        string
+	Audience      []string
+	TTL           time.Duration // npr 60 * time.Minute
+	NotBeforeSkew time.Duration // npr 0 ili 30s
 }
 
 // GenerateJWT generates a JWT token for the user
-func GenerateJWT(userID int64, username string, secretKey []byte) (string, error) {
-	// Set claims
+func GenerateJWT(userID int64, username string, secretKey []byte, opt Options) (string, error) {
+	now := time.Now()
+
 	claims := Claims{
 		UserID:   userID,
 		Username: username,
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: time.Now().Add(60 * time.Minute).Unix(), // Expire  in 60 minutes
-			Issuer:    "AJ",
+		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:    opt.Issuer,
+			Subject:   username,
+			Audience:  jwt.ClaimStrings(opt.Audience),
+			ExpiresAt: jwt.NewNumericDate(now.Add(opt.TTL)),
+			IssuedAt:  jwt.NewNumericDate(now),
+			NotBefore: jwt.NewNumericDate(now.Add(opt.NotBeforeSkew)),
 		},
 	}
 
-	// Create token with claims and sign it
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(secretKey)
 }
 
 // ParseJWT parses the JWT token and returns the claims
 func ParseJWT(tokenString string, secretKey []byte) (*Claims, error) {
-	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (any, error) {
+	keyFunc := func(token *jwt.Token) (any, error) {
+		// zaštita: prihvati isključivo HS256
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok || token.Method.Alg() != jwt.SigningMethodHS256.Alg() {
+			return nil, errors.New("unexpected signing method")
+		}
 		return secretKey, nil
-	})
+	}
+
+	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, keyFunc, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
 	if err != nil {
 		return nil, err
 	}
-	// Extract claims
+
 	if claims, ok := token.Claims.(*Claims); ok && token.Valid {
 		return claims, nil
 	}
-	return nil, err
+	return nil, errors.New("invalid token")
 }

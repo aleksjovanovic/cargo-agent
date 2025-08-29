@@ -7,10 +7,10 @@ type City struct {
 }
 
 type Country struct {
-	ID         int32  `json:"id"`
-	Name       string `json:"name"`
-	Code       string `json:"code"`
-	Alpha3Code string `json:"alpha3_code"`
-	EuMember   bool   `json:"eu_member"`
-	Continent  string `json:"continent"`
+	ID         int32   `json:"id"`
+	Name       string  `json:"name"`
+	Code       string  `json:"code"`
+	Alpha3Code string  `json:"alpha3_code"`
+	EuMember   *bool   `json:"eu_member,omitempty"`
+	Continent  *string `json:"continent,omitempty"`
 }
