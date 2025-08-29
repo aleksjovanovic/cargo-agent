@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/aleksjovanovic/cargo-agent/internal/dbconfig"
-	"github.com/aleksjovanovic/cargo-agent/internal/handlers"
+	"github.com/aleksjovanovic/cargo-agent/internal/api/v1/handlers"
+	"github.com/aleksjovanovic/cargo-agent/internal/api/v1/routes"
+	dbconfig "github.com/aleksjovanovic/cargo-agent/internal/config"
 	"github.com/aleksjovanovic/cargo-agent/internal/logger"
-	"github.com/aleksjovanovic/cargo-agent/internal/routes"
 	"github.com/aleksjovanovic/cargo-agent/internal/store"
 	"github.com/redis/go-redis/v9"
 )

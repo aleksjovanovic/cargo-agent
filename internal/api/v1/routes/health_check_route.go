@@ -3,7 +3,7 @@ package routes
 import (
 	"net/http"
 
-	"github.com/aleksjovanovic/cargo-agent/internal/handlers"
+	"github.com/aleksjovanovic/cargo-agent/internal/api/v1/handlers"
 )
 
 func SetupHealthCheckRoute(mux *http.ServeMux, handler *handlers.Handler) {

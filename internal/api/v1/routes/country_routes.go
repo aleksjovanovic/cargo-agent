@@ -3,7 +3,7 @@ package routes
 import (
 	"net/http"
 
-	"github.com/aleksjovanovic/cargo-agent/internal/handlers"
+	"github.com/aleksjovanovic/cargo-agent/internal/api/v1/handlers"
 	"github.com/aleksjovanovic/cargo-agent/internal/middlewares"
 	"github.com/aleksjovanovic/cargo-agent/internal/response"
 )
