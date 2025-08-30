@@ -21,6 +21,7 @@ func SetupCountryRoutes(mux *http.ServeMux, handler *handlers.Handler) {
 
 	// Cities (nested)
 	cMux.Handle("GET /id/{id}/cities", auth(http.HandlerFunc(handler.ListCitiesByCountryIDHandler())))
+	cMux.Handle("GET /name/{name}/cities", auth(http.HandlerFunc(handler.ListCitiesByCountryNameHandler())))
 
 	// Guards
 	cMux.Handle("GET /id", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

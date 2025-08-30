@@ -188,7 +188,7 @@ paths:
                     message: Failed to commit transaction
                     details: null
 
-  /users/profile:
+  /users/me:
     get:
       tags:
         - User
@@ -792,7 +792,7 @@ paths:
                     message: Please log in to continue
                     details: null
         '404':
-          description: Cities not found
+          description: Cities not found for the specified ID
           content:
             application/json:
               schema:
@@ -804,6 +804,76 @@ paths:
                     message: Cities not found
                     details: null
 
+  /countries/name/{name}/cities:
+    get:
+      tags:
+        - Country
+        - City
+      summary: List cities by country name
+      description: Returns a list of cities for the given country name. Requires a valid JWT token.
+      operationId: listCitiesByCountryName
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: name
+          in: path
+          required: true
+          description: Country name (string)
+          schema:
+            type: string
+          example: Serbia
+      responses:
+        '200':
+          description: Cities loaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CitiesListByCountrySuccessResponse'
+              examples:
+                from_cache:
+                  value:
+                    message: success
+                    data:
+                      - id: 36
+                        name: Belgrade
+                        country_id: 36
+        '400':
+          description: Invalid name (must be a non-empty string)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalid_id:
+                  value:
+                    error: invalid_name
+                    message: Country name cannot be empty
+                    details: null
+        '401':
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                unauthorized:
+                  value:
+                    error: unauthorized
+                    message: Please log in to continue
+                    details: null
+        '404':
+          description: Cities not found for the specified country name
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  value:
+                    error: not_found
+                    message: Cities not found
+                    details: null
+      
 components:
   securitySchemes:
     bearerAuth:

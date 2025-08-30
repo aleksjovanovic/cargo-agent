@@ -19,8 +19,8 @@ func SetupUserRoutes(mux *http.ServeMux, handler *handlers.Handler) {
 	userMux.HandleFunc("POST /login", handler.LoginUserHandler())
 
 	// Protected
-	userMux.Handle("GET /profile", auth(http.HandlerFunc(handler.UserProfileHandler())))
-	userMux.Handle("PATCH /profile", auth(http.HandlerFunc(handler.UpdateUserProfileHandler())))
+	userMux.Handle("GET /me", auth(http.HandlerFunc(handler.UserProfileHandler())))
+	userMux.Handle("PATCH /me", auth(http.HandlerFunc(handler.UpdateUserProfileHandler())))
 	userMux.Handle("PUT /me/password", auth(http.HandlerFunc(handler.ChangePasswordHandler())))
 	userMux.Handle("DELETE /{id}", auth(http.HandlerFunc(handler.DeleteUserHandler())))
 

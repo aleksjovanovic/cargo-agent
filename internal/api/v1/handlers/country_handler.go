@@ -127,7 +127,7 @@ func (h *Handler) GetCountryByNameHandler() http.HandlerFunc {
 	}
 }
 
-// Get cities by country id
+// List cities by country id
 func (h *Handler) ListCitiesByCountryIDHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if _, ok := r.Context().Value(middlewares.UserClaimsKey).(*authn.Claims); !ok {
@@ -155,6 +155,55 @@ func (h *Handler) ListCitiesByCountryIDHandler() http.HandlerFunc {
 		}
 
 		cities, err := h.Users.Q().ListCitiesByCountryID(r.Context(), int32(countryId))
+		if err != nil {
+			response.RespondWithError(w, http.StatusNotFound, "not_found", "Cities not found", nil)
+			return
+		}
+
+		if b, err := json.Marshal(cities); err == nil {
+			_ = h.Users.RDB().Set(r.Context(), cacheKey, b, 24*time.Hour).Err()
+		}
+
+		response.RespondWithSuccess(w, http.StatusOK, response.Envelope{
+			"message": "success",
+			"data":    cities,
+		})
+	}
+}
+
+// List cities by country name
+func (h *Handler) ListCitiesByCountryNameHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if _, ok := r.Context().Value(middlewares.UserClaimsKey).(*authn.Claims); !ok {
+			response.RespondWithError(w, http.StatusUnauthorized, "unauthorized", "Please log in to continue", nil)
+			return
+		}
+
+		name := strings.TrimSpace(r.PathValue("name"))
+		if name == "" {
+			response.RespondWithError(w, http.StatusBadRequest, "invalid_name", "Country name cannot be empty", nil)
+			return
+		}
+
+		cacheKey := fmt.Sprintf("countries:name:%s:cities:v1", strings.ToLower(name))
+		if cached, err := h.Users.RDB().Get(r.Context(), cacheKey).Result(); err == nil && cached != "" {
+			var cities []store.City
+			if err := json.Unmarshal([]byte(cached), &cities); err == nil {
+				response.RespondWithSuccess(w, http.StatusOK, response.Envelope{
+					"message": "success (from cache/redis)",
+					"data":    cities,
+				})
+				return
+			}
+		}
+
+		country, err := h.Users.Q().GetCountryByName(r.Context(), name)
+		if err != nil {
+			response.RespondWithError(w, http.StatusNotFound, "not_found", "Country not found", nil)
+			return
+		}
+
+		cities, err := h.Users.Q().ListCitiesByCountryID(r.Context(), country.ID)
 		if err != nil {
 			response.RespondWithError(w, http.StatusNotFound, "not_found", "Cities not found", nil)
 			return
