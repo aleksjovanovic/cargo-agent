@@ -21,6 +21,7 @@ type Config struct {
 	DatabaseURL string
 	Environment string
 	LogLevel    string
+	JWTSecret   string
 }
 
 func LoadConfig() (*Config, error) {
@@ -31,6 +32,7 @@ func LoadConfig() (*Config, error) {
 		DatabaseURL: getEnv("DATABASE_URL", "postgresql://cargo_agent_user:goldsink561@localhost:5432/cargo_agent"),
 		Environment: getEnv("ENVIRONMENT", "development"),
 		LogLevel:    getEnv("LOG_LEVEL", "info"),
+		JWTSecret:   getEnv("JWT_SECRET_KEY", ""),
 	}, nil
 }
 
@@ -137,7 +139,6 @@ func ConnectDB(databaseURL string) *sql.DB {
 	db.SetMaxIdleConns(maxIdle)
 	db.SetConnMaxLifetime(lifetime)
 
-	// kratak timeout na ping
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 

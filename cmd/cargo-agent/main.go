@@ -1,56 +1,104 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
-	"github.com/aleksjovanovic/cargo-agent/internal/api/v1/handlers"
-	"github.com/aleksjovanovic/cargo-agent/internal/api/v1/routes"
-	dbconfig "github.com/aleksjovanovic/cargo-agent/internal/config"
+	v1handlers "github.com/aleksjovanovic/cargo-agent/internal/api/v1/handlers"
+	v1routes "github.com/aleksjovanovic/cargo-agent/internal/api/v1/routes"
+	"github.com/aleksjovanovic/cargo-agent/internal/authn"
+	"github.com/aleksjovanovic/cargo-agent/internal/config"
 	"github.com/aleksjovanovic/cargo-agent/internal/logger"
+	"github.com/aleksjovanovic/cargo-agent/internal/middlewares"
+	"github.com/aleksjovanovic/cargo-agent/internal/services"
 	"github.com/aleksjovanovic/cargo-agent/internal/store"
 	"github.com/redis/go-redis/v9"
 )
 
 func main() {
-
-	// Load configuration
-	config, err := dbconfig.LoadConfig()
+	// 1) Config
+	cfg, err := config.LoadConfig()
 	if err != nil {
 		logger.Fatal("Failed to load configuration", "error", err)
 	}
+	if cfg.JWTSecret == "" {
+		logger.Fatal("JWT secret missing", "hint", "set JWT_SECRET_KEY in .env or environment")
+	}
+	// (legacy) — ako neki deo i dalje čita direktno iz env-a
+	_ = os.Setenv("JWT_SECRET_KEY", cfg.JWTSecret)
 
-	// Connect to the database
-	db := dbconfig.ConnectDB(config.DatabaseURL)
+	// 2) Infra: DB & Redis
+	db := config.ConnectDB(cfg.DatabaseURL)
 	defer db.Close()
 
-	// Connect to Redis
-	rdb := dbconfig.ConnectRedis()
-	defer func(rdb *redis.Client) {
-		_ = rdb.Close()
-	}(rdb)
+	rdb := config.ConnectRedis()
+	defer func(rdb *redis.Client) { _ = rdb.Close() }(rdb)
 
-	// Initialize sqlc queries
+	// 3) sqlc queries
 	queries := store.New(db)
 
-	// Create a new handler with queries
-	handler := handlers.NewHandlers(db, queries, rdb)
-
-	// Set up HTTP server and routes
-	mux := http.NewServeMux()
-
-	// Setup routes without the prefix
-	routes.SetupRoutes(mux, handler)
-
-	serverAddr := fmt.Sprintf(":%s", config.ServerPort)
-	server := &http.Server{
-		Addr:    serverAddr,
-		Handler: mux,
+	// 4) JWT opcije (prilagodi po potrebi)
+	jwtOpt := authn.Options{
+		Issuer:        "cargo-agent",
+		Audience:      []string{"cargo-agent-gui"},
+		TTL:           time.Hour,
+		NotBeforeSkew: 0,
 	}
 
-	// Start server
-	logger.Info("Starting server", "addr", serverAddr)
-	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		logger.Fatal("Server failed to start", "error", err)
+	// 5) Servisi
+	usersSvc := services.NewUserService(db, queries, rdb, []byte(cfg.JWTSecret), jwtOpt)
+	countriesSvc := services.NewCountryService(queries, rdb)
+
+	// 6) HTTP handleri (tanki) — injektuju servise
+	handler := v1handlers.NewHandlers(usersSvc, countriesSvc)
+
+	// 7) Rute (v1)
+	mux := http.NewServeMux()
+	v1routes.SetupRoutes(mux, handler)
+
+	// 8) Global middleware chain
+	root := middlewares.RequestID(middlewares.Recoverer(mux))
+
+	// 9) HTTP server sa timeout-ima
+	serverAddr := fmt.Sprintf(":%s", cfg.ServerPort)
+	srv := &http.Server{
+		Addr:         serverAddr,
+		Handler:      root,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+
+	// 10) Start + graceful shutdown
+	errCh := make(chan error, 1)
+	go func() {
+		logger.Info("Starting server", "addr", serverAddr, "env", cfg.Environment)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			errCh <- err
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	select {
+	case sig := <-quit:
+		logger.Warn("Shutting down server", "signal", sig.String())
+	case err := <-errCh:
+		logger.Fatal("Server failed", "error", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
+		logger.Error("Graceful shutdown failed, forcing close", "error", err)
+		_ = srv.Close()
+	} else {
+		logger.Info("Server stopped gracefully")
 	}
 }

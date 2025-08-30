@@ -22,6 +22,29 @@ func WithHeaders(m map[string]string) Option {
 	}
 }
 
+// -----------------------------
+// AppError (koristi ga service sloj)
+// -----------------------------
+type AppError struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
+	Details any    `json:"details,omitempty"`
+	Status  int    `json:"-"` // HTTP status, ne ide u JSON telo
+}
+
+func (e *AppError) Error() string { return e.Message }
+
+// Ako želiš direktno da ispišeš AppError iz handler-a:
+func WriteAppError(w http.ResponseWriter, e *AppError, opts ...Option) {
+	if e == nil {
+		return
+	}
+	RespondWithError(w, e.Status, e.Code, e.Message, e.Details, opts...)
+}
+
+// -----------------------------
+// JSON helperi za odgovore
+// -----------------------------
 func JSON(w http.ResponseWriter, status int, data any, opts ...Option) {
 	for _, opt := range opts {
 		opt(w.Header())
@@ -56,8 +79,8 @@ func RespondWithSuccess(w http.ResponseWriter, status int, payload any, opts ...
 
 func RespondWithError(w http.ResponseWriter, status int, code, message string, details any, opts ...Option) {
 	errBody := Envelope{
-		"error":   code,    // flatten kao u swaggeru
-		"message": message, // flatten
+		"error":   code,
+		"message": message,
 	}
 	if details != nil {
 		errBody["details"] = details

@@ -10,7 +10,6 @@ func SetupRoutes(mux *http.ServeMux, handler *handlers.Handler) {
 	SetupHealthCheckRoute(mux, handler)
 	SetupUserRoutes(mux, handler)
 	SetupCountryRoutes(mux, handler)
-
 	SetupYamlRoute(mux, handler)
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -18,6 +17,5 @@ func SetupRoutes(mux *http.ServeMux, handler *handlers.Handler) {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-
 	})
 }

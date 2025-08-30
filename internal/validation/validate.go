@@ -109,7 +109,7 @@ func ValidateCreateUserRequest(req *request.CreateUserRequest) error {
 		minMax("vat_number", v, 3, 30)
 	}
 
-	// Status: required, enum (koristimo models konstante)
+	// Status: required, enum
 	if v := trim(req.Status); v == "" {
 		errs = append(errs, "status is required")
 	} else {
@@ -149,7 +149,7 @@ func ValidateUpdateUserProfileRequest(req *request.UpdateUserProfileRequest) err
 
 	trim := func(p *string) (string, bool) {
 		if p == nil {
-			return "", false // polje nije poslato
+			return "", false
 		}
 		return strings.TrimSpace(*p), true
 	}
@@ -248,7 +248,6 @@ func ValidateLoginRequest(req request.LoginRequest) error {
 	var errs []string
 
 	if strings.TrimSpace(req.Username) == "" {
-		// u tvojoj šemi “Username” polje nosi i username ili email → poruka to jasno kaže
 		errs = append(errs, "username/email is required")
 	}
 	if strings.TrimSpace(req.Password) == "" {

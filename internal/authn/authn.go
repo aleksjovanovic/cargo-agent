@@ -16,8 +16,8 @@ type Claims struct {
 type Options struct {
 	Issuer        string
 	Audience      []string
-	TTL           time.Duration // npr 60 * time.Minute
-	NotBeforeSkew time.Duration // npr 0 ili 30s
+	TTL           time.Duration
+	NotBeforeSkew time.Duration
 }
 
 // GenerateJWT generates a JWT token for the user
@@ -44,7 +44,7 @@ func GenerateJWT(userID int64, username string, secretKey []byte, opt Options) (
 // ParseJWT parses the JWT token and returns the claims
 func ParseJWT(tokenString string, secretKey []byte) (*Claims, error) {
 	keyFunc := func(token *jwt.Token) (any, error) {
-		// zaštita: prihvati isključivo HS256
+		// protection: HS256
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok || token.Method.Alg() != jwt.SigningMethodHS256.Alg() {
 			return nil, errors.New("unexpected signing method")
 		}

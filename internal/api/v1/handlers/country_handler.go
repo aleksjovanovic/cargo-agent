@@ -28,7 +28,7 @@ func (h *Handler) ListCountriesHandler() http.HandlerFunc {
 		}
 
 		cacheKey := "countries:list:v1"
-		if cached, err := h.Redis.Get(r.Context(), cacheKey).Result(); err == nil {
+		if cached, err := h.Users.RDB().Get(r.Context(), cacheKey).Result(); err == nil {
 			var countries []store.Country
 			if err := json.Unmarshal([]byte(cached), &countries); err == nil {
 				response.RespondWithSuccess(w, http.StatusOK, response.Envelope{
@@ -39,14 +39,14 @@ func (h *Handler) ListCountriesHandler() http.HandlerFunc {
 			}
 		}
 
-		countries, err := h.Queries.ListCountries(r.Context())
+		countries, err := h.Users.Q().ListCountries(r.Context())
 		if err != nil {
 			response.RespondWithError(w, http.StatusNotFound, "not_found", "Countries not found", nil)
 			return
 		}
 
 		if b, err := json.Marshal(countries); err == nil {
-			_ = h.Redis.Set(r.Context(), cacheKey, b, 24*time.Hour).Err()
+			_ = h.Users.RDB().Set(r.Context(), cacheKey, b, 24*time.Hour).Err()
 		}
 
 		response.RespondWithSuccess(w, http.StatusOK, response.Envelope{
@@ -72,7 +72,7 @@ func (h *Handler) GetCountryByIDHandler() http.HandlerFunc {
 		}
 
 		cacheKey := fmt.Sprintf("countries:id:%d:v1", countryId)
-		if cached, err := h.Redis.Get(r.Context(), cacheKey).Result(); err == nil {
+		if cached, err := h.Users.RDB().Get(r.Context(), cacheKey).Result(); err == nil {
 			var country store.Country
 			if err := json.Unmarshal([]byte(cached), &country); err == nil {
 				response.RespondWithSuccess(w, http.StatusOK, response.Envelope{
@@ -83,14 +83,14 @@ func (h *Handler) GetCountryByIDHandler() http.HandlerFunc {
 			}
 		}
 
-		country, err := h.Queries.GetCountryByID(r.Context(), int32(countryId))
+		country, err := h.Users.Q().GetCountryByID(r.Context(), int32(countryId))
 		if err != nil {
 			response.RespondWithError(w, http.StatusNotFound, "not_found", "Country not found", nil)
 			return
 		}
 
 		if b, err := json.Marshal(country); err == nil {
-			_ = h.Redis.Set(r.Context(), cacheKey, b, 24*time.Hour).Err()
+			_ = h.Users.RDB().Set(r.Context(), cacheKey, b, 24*time.Hour).Err()
 		}
 
 		response.RespondWithSuccess(w, http.StatusOK, response.Envelope{
@@ -114,7 +114,7 @@ func (h *Handler) GetCountryByNameHandler() http.HandlerFunc {
 			return
 		}
 
-		country, err := h.Queries.GetCountryByName(r.Context(), countryName)
+		country, err := h.Users.Q().GetCountryByName(r.Context(), countryName)
 		if err != nil {
 			response.RespondWithError(w, http.StatusNotFound, "not_found", "Country not found", nil)
 			return
@@ -143,7 +143,7 @@ func (h *Handler) ListCitiesByCountryIDHandler() http.HandlerFunc {
 		}
 
 		cacheKey := fmt.Sprintf("countries:%d:cities:v1", int32(countryId))
-		if cached, err := h.Redis.Get(r.Context(), cacheKey).Result(); err == nil {
+		if cached, err := h.Users.RDB().Get(r.Context(), cacheKey).Result(); err == nil {
 			var cities []store.City
 			if err := json.Unmarshal([]byte(cached), &cities); err == nil {
 				response.RespondWithSuccess(w, http.StatusOK, response.Envelope{
@@ -154,14 +154,14 @@ func (h *Handler) ListCitiesByCountryIDHandler() http.HandlerFunc {
 			}
 		}
 
-		cities, err := h.Queries.ListCitiesByCountryID(r.Context(), int32(countryId))
+		cities, err := h.Users.Q().ListCitiesByCountryID(r.Context(), int32(countryId))
 		if err != nil {
 			response.RespondWithError(w, http.StatusNotFound, "not_found", "Cities not found", nil)
 			return
 		}
 
 		if b, err := json.Marshal(cities); err == nil {
-			_ = h.Redis.Set(r.Context(), cacheKey, b, 24*time.Hour).Err()
+			_ = h.Users.RDB().Set(r.Context(), cacheKey, b, 24*time.Hour).Err()
 		}
 
 		response.RespondWithSuccess(w, http.StatusOK, response.Envelope{

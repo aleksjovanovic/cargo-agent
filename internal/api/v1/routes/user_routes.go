@@ -2,6 +2,7 @@ package routes
 
 import (
 	"net/http"
+	"os"
 
 	"github.com/aleksjovanovic/cargo-agent/internal/api/v1/handlers"
 	"github.com/aleksjovanovic/cargo-agent/internal/middlewares"
@@ -10,12 +11,19 @@ import (
 func SetupUserRoutes(mux *http.ServeMux, handler *handlers.Handler) {
 	userMux := http.NewServeMux()
 
-	// Define user routes with method-based routing
+	// “Instanciraj” auth middleware
+	auth := middlewares.Authz([]byte(os.Getenv("JWT_SECRET_KEY")))
+
+	// Public
 	userMux.HandleFunc("POST /signup", handler.CreateUserHandler())
 	userMux.HandleFunc("POST /login", handler.LoginUserHandler())
-	userMux.Handle("GET /profile", middlewares.AuthzMiddleware(http.HandlerFunc(handler.UserProfileHandler())))
-	userMux.Handle("PATCH /profile", middlewares.AuthzMiddleware(http.HandlerFunc(handler.UpdateUserProfileHandler())))
-	userMux.Handle("PUT /me/password", middlewares.AuthzMiddleware(http.HandlerFunc(handler.ChangePasswordHandler())))
-	userMux.Handle("DELETE /{id}", middlewares.AuthzMiddleware(http.HandlerFunc(handler.DeleteUserHandler())))
+
+	// Protected
+	userMux.Handle("GET /profile", auth(http.HandlerFunc(handler.UserProfileHandler())))
+	userMux.Handle("PATCH /profile", auth(http.HandlerFunc(handler.UpdateUserProfileHandler())))
+	userMux.Handle("PUT /me/password", auth(http.HandlerFunc(handler.ChangePasswordHandler())))
+	userMux.Handle("DELETE /{id}", auth(http.HandlerFunc(handler.DeleteUserHandler())))
+
+	// Mount pod /cargo-agent/v1/users/
 	mux.Handle("/cargo-agent/v1/users/", http.StripPrefix("/cargo-agent/v1/users", userMux))
 }

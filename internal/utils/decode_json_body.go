@@ -9,7 +9,6 @@ import (
 	"strings"
 )
 
-// JSONError predstavlja grešku dekodiranja koju možeš direktno mapirati u HTTP odgovor.
 type JSONError struct {
 	Status int
 	Msg    string
@@ -17,9 +16,7 @@ type JSONError struct {
 
 func (e *JSONError) Error() string { return e.Msg }
 
-// DecodeJSONBody striktno dekodira JSON u dst, sa zaštitama i korisnim porukama.
 func DecodeJSONBody(w http.ResponseWriter, r *http.Request, dst any, maxBytes int64) error {
-	// 1) Content-Type check (dozvoli application/json i varijante sa charset-om)
 	if ct := r.Header.Get("Content-Type"); ct != "" {
 		base := strings.TrimSpace(strings.Split(ct, ";")[0])
 		if !strings.EqualFold(base, "application/json") {
@@ -30,14 +27,12 @@ func DecodeJSONBody(w http.ResponseWriter, r *http.Request, dst any, maxBytes in
 		}
 	}
 
-	// 2) Limitiraj telo (DoS zaštita)
 	if maxBytes <= 0 {
-		maxBytes = 1 << 20 // podrazumevano 1MB
+		maxBytes = 1 << 20
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, maxBytes)
 	defer r.Body.Close()
 
-	// 3) Striktno dekodiranje
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 
@@ -53,7 +48,6 @@ func DecodeJSONBody(w http.ResponseWriter, r *http.Request, dst any, maxBytes in
 		case errors.As(err, &ute):
 			field := ute.Field
 			if field == "" {
-				// kada polje nije direktno dostupno
 				field = "(at position)"
 			}
 			return &JSONError{Status: http.StatusBadRequest, Msg: fmt.Sprintf("Invalid value for field %q", field)}
@@ -62,12 +56,10 @@ func DecodeJSONBody(w http.ResponseWriter, r *http.Request, dst any, maxBytes in
 		case strings.HasPrefix(err.Error(), "http: request body too large"):
 			return &JSONError{Status: http.StatusRequestEntityTooLarge, Msg: "Request body too large"}
 		default:
-			// drugi slučajevi (npr. custom unmarshaler error)
 			return &JSONError{Status: http.StatusBadRequest, Msg: "Invalid request payload"}
 		}
 	}
 
-	// 4) Ne dozvoli dodatni trailing JSON (npr. "{}{}")
 	if err := dec.Decode(&struct{}{}); err != io.EOF {
 		return &JSONError{Status: http.StatusBadRequest, Msg: "Request body must contain a single JSON object"}
 	}

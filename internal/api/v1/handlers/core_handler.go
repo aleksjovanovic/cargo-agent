@@ -1,23 +1,17 @@
 package handlers
 
-import (
-	"database/sql"
+import "github.com/aleksjovanovic/cargo-agent/internal/services"
 
-	"github.com/aleksjovanovic/cargo-agent/internal/store"
-	"github.com/redis/go-redis/v9"
-)
-
+// Handler je tanak sloj – injektuje servise i poziva ih.
 type Handler struct {
-	DB      *sql.DB
-	Queries *store.Queries
-	Redis   *redis.Client
+	Users     *services.UserService
+	Countries *services.CountryService
 }
 
-// NewHandlers returns a new Handlers struct with queries
-func NewHandlers(db *sql.DB, queries *store.Queries, redisClient *redis.Client) *Handler {
+// NewHandlers – prima servise i sklapa jedan objekat za rute.
+func NewHandlers(users *services.UserService, countries *services.CountryService) *Handler {
 	return &Handler{
-		DB:      db,
-		Queries: queries,
-		Redis:   redisClient,
+		Users:     users,
+		Countries: countries,
 	}
 }
