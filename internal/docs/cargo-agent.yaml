@@ -1155,10 +1155,18 @@ components:
           type: integer
           format: int32
           example: 1
+        latitude:
+          type: string
+          example: 11.11111
+        longitude:
+          type: string
+          example: 22.22222
       required:
         - id
         - name
         - country_id
+        - latitude
+        - longitude
 
     CitiesListByCountrySuccessResponse:
       type: object
