@@ -14,25 +14,25 @@ import (
 
 const changePassword = `-- name: ChangePassword :exec
 UPDATE users
-SET password=$2, updated=$3
+SET password=$2, updated_at=$3
 WHERE id = $1
 `
 
 type ChangePasswordParams struct {
-	ID       int32        `json:"id"`
-	Password string       `json:"password"`
-	Updated  sql.NullTime `json:"updated"`
+	ID        int32        `json:"id"`
+	Password  string       `json:"password"`
+	UpdatedAt sql.NullTime `json:"updated_at"`
 }
 
 func (q *Queries) ChangePassword(ctx context.Context, arg ChangePasswordParams) error {
-	_, err := q.exec(ctx, q.changePasswordStmt, changePassword, arg.ID, arg.Password, arg.Updated)
+	_, err := q.exec(ctx, q.changePasswordStmt, changePassword, arg.ID, arg.Password, arg.UpdatedAt)
 	return err
 }
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO users(username, email, password, name, country, city, legal_address, vat_number, status, language, created, updated)
+INSERT INTO users(username, email, password, name, country, city, legal_address, vat_number, status, language, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-RETURNING id, username, email, name, country, city, legal_address, vat_number, status, language, created, updated
+RETURNING id, username, email, name, country, city, legal_address, vat_number, status, language, created_at, updated_at
 `
 
 type CreateUserParams struct {
@@ -46,8 +46,8 @@ type CreateUserParams struct {
 	VatNumber    string            `json:"vat_number"`
 	Status       models.UserStatus `json:"status"`
 	Language     string            `json:"language"`
-	Created      sql.NullTime      `json:"created"`
-	Updated      sql.NullTime      `json:"updated"`
+	CreatedAt    sql.NullTime      `json:"created_at"`
+	UpdatedAt    sql.NullTime      `json:"updated_at"`
 }
 
 type CreateUserRow struct {
@@ -61,8 +61,8 @@ type CreateUserRow struct {
 	VatNumber    string            `json:"vat_number"`
 	Status       models.UserStatus `json:"status"`
 	Language     string            `json:"language"`
-	Created      sql.NullTime      `json:"created"`
-	Updated      sql.NullTime      `json:"updated"`
+	CreatedAt    sql.NullTime      `json:"created_at"`
+	UpdatedAt    sql.NullTime      `json:"updated_at"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateUserRow, error) {
@@ -77,8 +77,8 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 		arg.VatNumber,
 		arg.Status,
 		arg.Language,
-		arg.Created,
-		arg.Updated,
+		arg.CreatedAt,
+		arg.UpdatedAt,
 	)
 	var i CreateUserRow
 	err := row.Scan(
@@ -92,8 +92,8 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 		&i.VatNumber,
 		&i.Status,
 		&i.Language,
-		&i.Created,
-		&i.Updated,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -101,17 +101,17 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 const deleteUser = `-- name: DeleteUser :exec
 UPDATE users
 SET status = 'deleted',
-    updated = $2
+    deleted_at = $2
 WHERE id = $1 AND status <> 'deleted'
 `
 
 type DeleteUserParams struct {
-	ID      int32        `json:"id"`
-	Updated sql.NullTime `json:"updated"`
+	ID        int32        `json:"id"`
+	DeletedAt sql.NullTime `json:"deleted_at"`
 }
 
 func (q *Queries) DeleteUser(ctx context.Context, arg DeleteUserParams) error {
-	_, err := q.exec(ctx, q.deleteUserStmt, deleteUser, arg.ID, arg.Updated)
+	_, err := q.exec(ctx, q.deleteUserStmt, deleteUser, arg.ID, arg.DeletedAt)
 	return err
 }
 
@@ -156,7 +156,7 @@ func (q *Queries) GetCountryByName(ctx context.Context, lower string) (Country, 
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, username, email, name, country, city, legal_address, vat_number, status, language, created, updated
+SELECT id, username, email, name, country, city, legal_address, vat_number, status, language, created_at, updated_at
 FROM users
 WHERE id = $1
 AND status = 'active'
@@ -173,8 +173,8 @@ type GetUserRow struct {
 	VatNumber    string            `json:"vat_number"`
 	Status       models.UserStatus `json:"status"`
 	Language     string            `json:"language"`
-	Created      sql.NullTime      `json:"created"`
-	Updated      sql.NullTime      `json:"updated"`
+	CreatedAt    sql.NullTime      `json:"created_at"`
+	UpdatedAt    sql.NullTime      `json:"updated_at"`
 }
 
 func (q *Queries) GetUser(ctx context.Context, id int32) (GetUserRow, error) {
@@ -191,14 +191,14 @@ func (q *Queries) GetUser(ctx context.Context, id int32) (GetUserRow, error) {
 		&i.VatNumber,
 		&i.Status,
 		&i.Language,
-		&i.Created,
-		&i.Updated,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const getUserByUsernameOrEmail = `-- name: GetUserByUsernameOrEmail :one
-SELECT id, username, password, email, name, country, city, legal_address, vat_number, status, language, created, updated
+SELECT id, username, password, email, name, country, city, legal_address, vat_number, status, language, created_at, updated_at
 FROM users
 WHERE (username = $1 OR email=$1)
 AND status = 'active'
@@ -216,8 +216,8 @@ type GetUserByUsernameOrEmailRow struct {
 	VatNumber    string            `json:"vat_number"`
 	Status       models.UserStatus `json:"status"`
 	Language     string            `json:"language"`
-	Created      sql.NullTime      `json:"created"`
-	Updated      sql.NullTime      `json:"updated"`
+	CreatedAt    sql.NullTime      `json:"created_at"`
+	UpdatedAt    sql.NullTime      `json:"updated_at"`
 }
 
 func (q *Queries) GetUserByUsernameOrEmail(ctx context.Context, username string) (GetUserByUsernameOrEmailRow, error) {
@@ -235,8 +235,8 @@ func (q *Queries) GetUserByUsernameOrEmail(ctx context.Context, username string)
 		&i.VatNumber,
 		&i.Status,
 		&i.Language,
-		&i.Created,
-		&i.Updated,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -256,7 +256,7 @@ func (q *Queries) GetUserPassword(ctx context.Context, id int32) (string, error)
 }
 
 const listCitiesByCountryID = `-- name: ListCitiesByCountryID :many
-SELECT id, name, country_id
+SELECT id, name, country_id, latitude, longitude
 FROM cities
 WHERE country_id=$1
 ORDER BY name
@@ -271,7 +271,13 @@ func (q *Queries) ListCitiesByCountryID(ctx context.Context, countryID int32) ([
 	items := []City{}
 	for rows.Next() {
 		var i City
-		if err := rows.Scan(&i.ID, &i.Name, &i.CountryID); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.CountryID,
+			&i.Latitude,
+			&i.Longitude,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -322,7 +328,7 @@ func (q *Queries) ListCountries(ctx context.Context) ([]Country, error) {
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, username, email, name, country, city, legal_address, vat_number, status, language, created, updated
+SELECT id, username, email, name, country, city, legal_address, vat_number, status, language, created_at, updated_at
 FROM users
 WHERE status = 'active'
 ORDER BY id
@@ -339,8 +345,8 @@ type ListUsersRow struct {
 	VatNumber    string            `json:"vat_number"`
 	Status       models.UserStatus `json:"status"`
 	Language     string            `json:"language"`
-	Created      sql.NullTime      `json:"created"`
-	Updated      sql.NullTime      `json:"updated"`
+	CreatedAt    sql.NullTime      `json:"created_at"`
+	UpdatedAt    sql.NullTime      `json:"updated_at"`
 }
 
 func (q *Queries) ListUsers(ctx context.Context) ([]ListUsersRow, error) {
@@ -363,8 +369,8 @@ func (q *Queries) ListUsers(ctx context.Context) ([]ListUsersRow, error) {
 			&i.VatNumber,
 			&i.Status,
 			&i.Language,
-			&i.Created,
-			&i.Updated,
+			&i.CreatedAt,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -390,10 +396,10 @@ SET
   legal_address = COALESCE($6, legal_address),
   vat_number    = COALESCE($7, vat_number),
   language      = COALESCE($8, language),
-  updated       = COALESCE($9, updated)
+  updated_at       = COALESCE($9, updated_at)
 WHERE id = $10
 AND status ='active'
-RETURNING id, username, email, name, country, city, legal_address, vat_number, status, language, created, updated
+RETURNING id, username, email, name, country, city, legal_address, vat_number, status, language, created_at, updated_at
 `
 
 type UpdateUserProfileParams struct {
@@ -405,7 +411,7 @@ type UpdateUserProfileParams struct {
 	LegalAddress sql.NullString `json:"legal_address"`
 	VatNumber    sql.NullString `json:"vat_number"`
 	Language     sql.NullString `json:"language"`
-	Updated      sql.NullTime   `json:"updated"`
+	UpdatedAt    sql.NullTime   `json:"updated_at"`
 	ID           int32          `json:"id"`
 }
 
@@ -420,8 +426,8 @@ type UpdateUserProfileRow struct {
 	VatNumber    string            `json:"vat_number"`
 	Status       models.UserStatus `json:"status"`
 	Language     string            `json:"language"`
-	Created      sql.NullTime      `json:"created"`
-	Updated      sql.NullTime      `json:"updated"`
+	CreatedAt    sql.NullTime      `json:"created_at"`
+	UpdatedAt    sql.NullTime      `json:"updated_at"`
 }
 
 func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) (UpdateUserProfileRow, error) {
@@ -434,7 +440,7 @@ func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfilePa
 		arg.LegalAddress,
 		arg.VatNumber,
 		arg.Language,
-		arg.Updated,
+		arg.UpdatedAt,
 		arg.ID,
 	)
 	var i UpdateUserProfileRow
@@ -449,8 +455,8 @@ func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfilePa
 		&i.VatNumber,
 		&i.Status,
 		&i.Language,
-		&i.Created,
-		&i.Updated,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }

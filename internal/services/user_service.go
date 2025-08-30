@@ -95,9 +95,9 @@ func (s *UserService) ChangePassword(ctx context.Context, userID int32, oldPass,
 	// persist
 	now := time.Now()
 	if err := s.q.ChangePassword(ctx, store.ChangePasswordParams{
-		ID:       userID,
-		Password: hashed,
-		Updated:  sql.NullTime{Time: now, Valid: true},
+		ID:        userID,
+		Password:  hashed,
+		UpdatedAt: sql.NullTime{Time: now, Valid: true},
 	}); err != nil {
 		return &response.AppError{Code: "password_update_failed", Message: "Failed to change password", Status: 500}
 	}
@@ -164,8 +164,8 @@ func (s *UserService) Signup(ctx context.Context, req request.CreateUserRequest)
 		VatNumber:    req.VatNumber,
 		Status:       models.UserStatus(req.Status),
 		Language:     req.Language,
-		Created:      sql.NullTime{Time: now, Valid: true},
-		Updated:      sql.NullTime{Time: now, Valid: true},
+		CreatedAt:    sql.NullTime{Time: now, Valid: true},
+		UpdatedAt:    sql.NullTime{Time: now, Valid: true},
 	})
 	if err != nil {
 		return nil, &response.AppError{Code: "user_creation_failed", Message: "Failed to create user", Status: 500}
@@ -223,7 +223,7 @@ func (s *UserService) UpdateProfile(ctx context.Context, userID int32, req reque
 		LegalAddress: utils.ToNullString(req.LegalAddress),
 		VatNumber:    utils.ToNullString(req.VatNumber),
 		Language:     utils.ToNullString(req.Language),
-		Updated:      sql.NullTime{Time: now, Valid: true},
+		UpdatedAt:    sql.NullTime{Time: now, Valid: true},
 	})
 	if err != nil {
 		return nil, &response.AppError{Code: "user_update_failed", Message: "Failed to update user profile", Status: 500}
@@ -245,8 +245,8 @@ func (s *UserService) UpdateProfile(ctx context.Context, userID int32, req reque
 func (s *UserService) Delete(ctx context.Context, userID int32) *response.AppError {
 	now := time.Now()
 	if err := s.q.DeleteUser(ctx, store.DeleteUserParams{
-		ID:      userID,
-		Updated: sql.NullTime{Time: now, Valid: true},
+		ID:        userID,
+		DeletedAt: sql.NullTime{Time: now, Valid: true},
 	}); err != nil {
 		return &response.AppError{Code: "delete_user_failed", Message: "Failed to delete user", Status: 500}
 	}

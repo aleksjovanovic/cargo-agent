@@ -31,6 +31,8 @@ type City struct {
 	ID        int32  `json:"id"`
 	Name      string `json:"name"`
 	CountryID int32  `json:"country_id"`
+	Latitude  string `json:"latitude"`
+	Longitude string `json:"longitude"`
 }
 
 type Country struct {

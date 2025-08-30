@@ -11,9 +11,11 @@ import (
 )
 
 type City struct {
-	ID        int32  `json:"id"`
-	Name      string `json:"name"`
-	CountryID int32  `json:"country_id"`
+	ID        int32          `json:"id"`
+	Name      string         `json:"name"`
+	CountryID int32          `json:"country_id"`
+	Latitude  sql.NullString `json:"latitude"`
+	Longitude sql.NullString `json:"longitude"`
 }
 
 type Country struct {
@@ -37,6 +39,7 @@ type User struct {
 	VatNumber    string            `json:"vat_number"`
 	Status       models.UserStatus `json:"status"`
 	Language     string            `json:"language"`
-	Created      sql.NullTime      `json:"created"`
-	Updated      sql.NullTime      `json:"updated"`
+	CreatedAt    sql.NullTime      `json:"created_at"`
+	UpdatedAt    sql.NullTime      `json:"updated_at"`
+	DeletedAt    sql.NullTime      `json:"deleted_at"`
 }
