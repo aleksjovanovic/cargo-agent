@@ -44,8 +44,8 @@ func main() {
 
 	// 4) JWT opcije (prilagodi po potrebi)
 	jwtOpt := authn.Options{
-		Issuer:        "cargo-agent",
-		Audience:      []string{"cargo-agent-gui"},
+		Issuer:        "AJ",
+		Audience:      []string{"cargo-agent"},
 		TTL:           time.Hour,
 		NotBeforeSkew: 0,
 	}

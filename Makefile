@@ -5,7 +5,7 @@ GO_FILES=$(shell find . -name '*.go' -not -path "./vendor/*" )
 
 run:
 	@echo "Running the server"
-	@go run main.go || true
+	@go run ./cmd/cargo-agent/ || true
 
 deps:
 	@echo "Installing dependencies"
