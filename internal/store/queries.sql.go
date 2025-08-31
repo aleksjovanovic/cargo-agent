@@ -8,6 +8,7 @@ package store
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/aleksjovanovic/cargo-agent/internal/models"
 )
@@ -27,6 +28,31 @@ type ChangePasswordParams struct {
 func (q *Queries) ChangePassword(ctx context.Context, arg ChangePasswordParams) error {
 	_, err := q.exec(ctx, q.changePasswordStmt, changePassword, arg.ID, arg.Password, arg.UpdatedAt)
 	return err
+}
+
+const createEmailVerificationToken = `-- name: CreateEmailVerificationToken :one
+INSERT INTO email_verification_tokens (user_id, token, valid_until)
+VALUES ($1, $2, $3)
+RETURNING id, user_id, token, created_at, valid_until
+`
+
+type CreateEmailVerificationTokenParams struct {
+	UserID     int32     `json:"user_id"`
+	Token      string    `json:"token"`
+	ValidUntil time.Time `json:"valid_until"`
+}
+
+func (q *Queries) CreateEmailVerificationToken(ctx context.Context, arg CreateEmailVerificationTokenParams) (EmailVerificationToken, error) {
+	row := q.queryRow(ctx, q.createEmailVerificationTokenStmt, createEmailVerificationToken, arg.UserID, arg.Token, arg.ValidUntil)
+	var i EmailVerificationToken
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Token,
+		&i.CreatedAt,
+		&i.ValidUntil,
+	)
+	return i, err
 }
 
 const createUser = `-- name: CreateUser :one
@@ -96,6 +122,26 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 	return i, err
 }
 
+const deleteEmailVerificationToken = `-- name: DeleteEmailVerificationToken :exec
+DELETE FROM email_verification_tokens
+WHERE token = $1
+`
+
+func (q *Queries) DeleteEmailVerificationToken(ctx context.Context, token string) error {
+	_, err := q.exec(ctx, q.deleteEmailVerificationTokenStmt, deleteEmailVerificationToken, token)
+	return err
+}
+
+const deleteExpiredEmailVerificationTokens = `-- name: DeleteExpiredEmailVerificationTokens :exec
+DELETE FROM email_verification_tokens
+WHERE valid_until < now()
+`
+
+func (q *Queries) DeleteExpiredEmailVerificationTokens(ctx context.Context) error {
+	_, err := q.exec(ctx, q.deleteExpiredEmailVerificationTokensStmt, deleteExpiredEmailVerificationTokens)
+	return err
+}
+
 const deleteUser = `-- name: DeleteUser :exec
 UPDATE users
 SET status = 'deleted',
@@ -149,6 +195,26 @@ func (q *Queries) GetCountryByName(ctx context.Context, lower string) (Country, 
 		&i.Alpha3Code,
 		&i.EuMember,
 		&i.Continent,
+	)
+	return i, err
+}
+
+const getEmailVerificationToken = `-- name: GetEmailVerificationToken :one
+SELECT id, user_id, token, created_at, valid_until
+FROM email_verification_tokens
+WHERE token = $1
+LIMIT 1
+`
+
+func (q *Queries) GetEmailVerificationToken(ctx context.Context, token string) (EmailVerificationToken, error) {
+	row := q.queryRow(ctx, q.getEmailVerificationTokenStmt, getEmailVerificationToken, token)
+	var i EmailVerificationToken
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Token,
+		&i.CreatedAt,
+		&i.ValidUntil,
 	)
 	return i, err
 }
@@ -457,4 +523,20 @@ func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfilePa
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const updateUserStatus = `-- name: UpdateUserStatus :exec
+UPDATE users
+SET status = $2, updated_at = now()
+WHERE id = $1
+`
+
+type UpdateUserStatusParams struct {
+	ID     int32             `json:"id"`
+	Status models.UserStatus `json:"status"`
+}
+
+func (q *Queries) UpdateUserStatus(ctx context.Context, arg UpdateUserStatusParams) error {
+	_, err := q.exec(ctx, q.updateUserStatusStmt, updateUserStatus, arg.ID, arg.Status)
+	return err
 }

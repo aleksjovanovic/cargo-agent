@@ -17,6 +17,7 @@ func SetupUserRoutes(mux *http.ServeMux, handler *handlers.Handler) {
 	// Public
 	userMux.HandleFunc("POST /signup", handler.CreateUserHandler())
 	userMux.HandleFunc("POST /login", handler.LoginUserHandler())
+	userMux.HandleFunc("GET /verify-email", handler.VerifyEmailHandler()) // ← NOVO (bez auth)
 
 	// Protected
 	userMux.Handle("GET /me", auth(http.HandlerFunc(handler.UserProfileHandler())))

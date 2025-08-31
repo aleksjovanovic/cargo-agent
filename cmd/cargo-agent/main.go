@@ -14,13 +14,16 @@ import (
 	"github.com/aleksjovanovic/cargo-agent/internal/authn"
 	"github.com/aleksjovanovic/cargo-agent/internal/config"
 	"github.com/aleksjovanovic/cargo-agent/internal/logger"
+	"github.com/aleksjovanovic/cargo-agent/internal/mailer"
 	"github.com/aleksjovanovic/cargo-agent/internal/middlewares"
 	"github.com/aleksjovanovic/cargo-agent/internal/services"
 	"github.com/aleksjovanovic/cargo-agent/internal/store"
+	"github.com/aleksjovanovic/cargo-agent/internal/templates"
 	"github.com/redis/go-redis/v9"
 )
 
 func main() {
+	templates.MustInit()
 	// 1) Config
 	cfg, err := config.LoadConfig()
 	if err != nil {
@@ -38,6 +41,11 @@ func main() {
 
 	rdb := config.ConnectRedis()
 	defer func(rdb *redis.Client) { _ = rdb.Close() }(rdb)
+	// Mailer
+	m, err := mailer.NewFromEnv()
+	if err != nil {
+		logger.Fatal("Mailer init failed", "error", err)
+	}
 
 	// 3) sqlc queries
 	queries := store.New(db)
@@ -51,7 +59,7 @@ func main() {
 	}
 
 	// 5) Servisi
-	usersSvc := services.NewUserService(db, queries, rdb, []byte(cfg.JWTSecret), jwtOpt)
+	usersSvc := services.NewUserService(db, queries, rdb, []byte(cfg.JWTSecret), jwtOpt, m)
 	countriesSvc := services.NewCountryService(queries, rdb)
 
 	// 6) HTTP handleri (tanki) — injektuju servise

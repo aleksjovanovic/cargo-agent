@@ -27,8 +27,17 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.changePasswordStmt, err = db.PrepareContext(ctx, changePassword); err != nil {
 		return nil, fmt.Errorf("error preparing query ChangePassword: %w", err)
 	}
+	if q.createEmailVerificationTokenStmt, err = db.PrepareContext(ctx, createEmailVerificationToken); err != nil {
+		return nil, fmt.Errorf("error preparing query CreateEmailVerificationToken: %w", err)
+	}
 	if q.createUserStmt, err = db.PrepareContext(ctx, createUser); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateUser: %w", err)
+	}
+	if q.deleteEmailVerificationTokenStmt, err = db.PrepareContext(ctx, deleteEmailVerificationToken); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteEmailVerificationToken: %w", err)
+	}
+	if q.deleteExpiredEmailVerificationTokensStmt, err = db.PrepareContext(ctx, deleteExpiredEmailVerificationTokens); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteExpiredEmailVerificationTokens: %w", err)
 	}
 	if q.deleteUserStmt, err = db.PrepareContext(ctx, deleteUser); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteUser: %w", err)
@@ -38,6 +47,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.getCountryByNameStmt, err = db.PrepareContext(ctx, getCountryByName); err != nil {
 		return nil, fmt.Errorf("error preparing query GetCountryByName: %w", err)
+	}
+	if q.getEmailVerificationTokenStmt, err = db.PrepareContext(ctx, getEmailVerificationToken); err != nil {
+		return nil, fmt.Errorf("error preparing query GetEmailVerificationToken: %w", err)
 	}
 	if q.getUserStmt, err = db.PrepareContext(ctx, getUser); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUser: %w", err)
@@ -60,6 +72,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.updateUserProfileStmt, err = db.PrepareContext(ctx, updateUserProfile); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateUserProfile: %w", err)
 	}
+	if q.updateUserStatusStmt, err = db.PrepareContext(ctx, updateUserStatus); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateUserStatus: %w", err)
+	}
 	return &q, nil
 }
 
@@ -70,9 +85,24 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing changePasswordStmt: %w", cerr)
 		}
 	}
+	if q.createEmailVerificationTokenStmt != nil {
+		if cerr := q.createEmailVerificationTokenStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing createEmailVerificationTokenStmt: %w", cerr)
+		}
+	}
 	if q.createUserStmt != nil {
 		if cerr := q.createUserStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing createUserStmt: %w", cerr)
+		}
+	}
+	if q.deleteEmailVerificationTokenStmt != nil {
+		if cerr := q.deleteEmailVerificationTokenStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteEmailVerificationTokenStmt: %w", cerr)
+		}
+	}
+	if q.deleteExpiredEmailVerificationTokensStmt != nil {
+		if cerr := q.deleteExpiredEmailVerificationTokensStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteExpiredEmailVerificationTokensStmt: %w", cerr)
 		}
 	}
 	if q.deleteUserStmt != nil {
@@ -88,6 +118,11 @@ func (q *Queries) Close() error {
 	if q.getCountryByNameStmt != nil {
 		if cerr := q.getCountryByNameStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getCountryByNameStmt: %w", cerr)
+		}
+	}
+	if q.getEmailVerificationTokenStmt != nil {
+		if cerr := q.getEmailVerificationTokenStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getEmailVerificationTokenStmt: %w", cerr)
 		}
 	}
 	if q.getUserStmt != nil {
@@ -123,6 +158,11 @@ func (q *Queries) Close() error {
 	if q.updateUserProfileStmt != nil {
 		if cerr := q.updateUserProfileStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing updateUserProfileStmt: %w", cerr)
+		}
+	}
+	if q.updateUserStatusStmt != nil {
+		if cerr := q.updateUserStatusStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateUserStatusStmt: %w", cerr)
 		}
 	}
 	return err
@@ -162,37 +202,47 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db                           DBTX
-	tx                           *sql.Tx
-	changePasswordStmt           *sql.Stmt
-	createUserStmt               *sql.Stmt
-	deleteUserStmt               *sql.Stmt
-	getCountryByIDStmt           *sql.Stmt
-	getCountryByNameStmt         *sql.Stmt
-	getUserStmt                  *sql.Stmt
-	getUserByUsernameOrEmailStmt *sql.Stmt
-	getUserPasswordStmt          *sql.Stmt
-	listCitiesByCountryIDStmt    *sql.Stmt
-	listCountriesStmt            *sql.Stmt
-	listUsersStmt                *sql.Stmt
-	updateUserProfileStmt        *sql.Stmt
+	db                                       DBTX
+	tx                                       *sql.Tx
+	changePasswordStmt                       *sql.Stmt
+	createEmailVerificationTokenStmt         *sql.Stmt
+	createUserStmt                           *sql.Stmt
+	deleteEmailVerificationTokenStmt         *sql.Stmt
+	deleteExpiredEmailVerificationTokensStmt *sql.Stmt
+	deleteUserStmt                           *sql.Stmt
+	getCountryByIDStmt                       *sql.Stmt
+	getCountryByNameStmt                     *sql.Stmt
+	getEmailVerificationTokenStmt            *sql.Stmt
+	getUserStmt                              *sql.Stmt
+	getUserByUsernameOrEmailStmt             *sql.Stmt
+	getUserPasswordStmt                      *sql.Stmt
+	listCitiesByCountryIDStmt                *sql.Stmt
+	listCountriesStmt                        *sql.Stmt
+	listUsersStmt                            *sql.Stmt
+	updateUserProfileStmt                    *sql.Stmt
+	updateUserStatusStmt                     *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:                           tx,
-		tx:                           tx,
-		changePasswordStmt:           q.changePasswordStmt,
-		createUserStmt:               q.createUserStmt,
-		deleteUserStmt:               q.deleteUserStmt,
-		getCountryByIDStmt:           q.getCountryByIDStmt,
-		getCountryByNameStmt:         q.getCountryByNameStmt,
-		getUserStmt:                  q.getUserStmt,
-		getUserByUsernameOrEmailStmt: q.getUserByUsernameOrEmailStmt,
-		getUserPasswordStmt:          q.getUserPasswordStmt,
-		listCitiesByCountryIDStmt:    q.listCitiesByCountryIDStmt,
-		listCountriesStmt:            q.listCountriesStmt,
-		listUsersStmt:                q.listUsersStmt,
-		updateUserProfileStmt:        q.updateUserProfileStmt,
+		db:                                       tx,
+		tx:                                       tx,
+		changePasswordStmt:                       q.changePasswordStmt,
+		createEmailVerificationTokenStmt:         q.createEmailVerificationTokenStmt,
+		createUserStmt:                           q.createUserStmt,
+		deleteEmailVerificationTokenStmt:         q.deleteEmailVerificationTokenStmt,
+		deleteExpiredEmailVerificationTokensStmt: q.deleteExpiredEmailVerificationTokensStmt,
+		deleteUserStmt:                           q.deleteUserStmt,
+		getCountryByIDStmt:                       q.getCountryByIDStmt,
+		getCountryByNameStmt:                     q.getCountryByNameStmt,
+		getEmailVerificationTokenStmt:            q.getEmailVerificationTokenStmt,
+		getUserStmt:                              q.getUserStmt,
+		getUserByUsernameOrEmailStmt:             q.getUserByUsernameOrEmailStmt,
+		getUserPasswordStmt:                      q.getUserPasswordStmt,
+		listCitiesByCountryIDStmt:                q.listCitiesByCountryIDStmt,
+		listCountriesStmt:                        q.listCountriesStmt,
+		listUsersStmt:                            q.listUsersStmt,
+		updateUserProfileStmt:                    q.updateUserProfileStmt,
+		updateUserStatusStmt:                     q.updateUserStatusStmt,
 	}
 }

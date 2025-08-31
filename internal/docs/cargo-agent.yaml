@@ -187,6 +187,63 @@ paths:
                     message: Failed to commit transaction
                     details: null
 
+  /users/verify-email:
+    get:
+      tags:
+        - Auth
+      summary: Verify email
+      description: Confirms a user's email using a verification token. This endpoint is public.
+      operationId: verifyEmail
+      parameters:
+        - name: token
+          in: query
+          required: true
+          description: Verification token from the email link
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Email verified
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteUserSuccessResponse'
+              examples:
+                ok:
+                  value:
+                    message: Email verified successfully
+                    data: null
+        '400':
+          description: Invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalid_token:
+                  value:
+                    error: invalid_token
+                    message: Token is required
+                    details: null
+        '410':
+          description: Token expired (gone)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                token_expired:
+                  value:
+                    error: token_expired
+                    message: Token has expired
+                    details: null
+        '500':
+          description: Server or database error during verification
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /users/me:
     get:
       tags:

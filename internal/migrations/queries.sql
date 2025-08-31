@@ -6,16 +6,22 @@ RETURNING id, username, email, name, country, city, legal_address, vat_number, s
 -- name: CreateEmailVerificationToken :one
 INSERT INTO email_verification_tokens (user_id, token, valid_until)
 VALUES ($1, $2, $3)
-RETURNING *;
+RETURNING id, user_id, token, created_at, valid_until;
 
 -- name: GetEmailVerificationToken :one
-SELECT * FROM email_verification_tokens
+SELECT id, user_id, token, created_at, valid_until
+FROM email_verification_tokens
 WHERE token = $1
 LIMIT 1;
 
 -- name: DeleteEmailVerificationToken :exec
 DELETE FROM email_verification_tokens
 WHERE token = $1;
+
+-- name: UpdateUserStatus :exec
+UPDATE users
+SET status = $2, updated_at = now()
+WHERE id = $1;
 
 -- name: DeleteExpiredEmailVerificationTokens :exec
 DELETE FROM email_verification_tokens

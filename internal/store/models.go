@@ -6,6 +6,7 @@ package store
 
 import (
 	"database/sql"
+	"time"
 
 	"github.com/aleksjovanovic/cargo-agent/internal/models"
 )
@@ -25,6 +26,14 @@ type Country struct {
 	Alpha3Code string         `json:"alpha3_code"`
 	EuMember   sql.NullBool   `json:"eu_member"`
 	Continent  sql.NullString `json:"continent"`
+}
+
+type EmailVerificationToken struct {
+	ID         int32     `json:"id"`
+	UserID     int32     `json:"user_id"`
+	Token      string    `json:"token"`
+	CreatedAt  time.Time `json:"created_at"`
+	ValidUntil time.Time `json:"valid_until"`
 }
 
 type User struct {

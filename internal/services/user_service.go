@@ -2,16 +2,25 @@ package services
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/aleksjovanovic/cargo-agent/internal/authn"
 	"github.com/aleksjovanovic/cargo-agent/internal/dtos/request"
+	"github.com/aleksjovanovic/cargo-agent/internal/logger"
+	"github.com/aleksjovanovic/cargo-agent/internal/mailer"
+	"github.com/aleksjovanovic/cargo-agent/internal/models"
 	"github.com/aleksjovanovic/cargo-agent/internal/response"
 	"github.com/aleksjovanovic/cargo-agent/internal/store"
+	"github.com/aleksjovanovic/cargo-agent/internal/templates"
 	"github.com/aleksjovanovic/cargo-agent/internal/utils"
 	"github.com/aleksjovanovic/cargo-agent/internal/validation"
 	"github.com/redis/go-redis/v9"
@@ -23,10 +32,11 @@ type UserService struct {
 	rdb       *redis.Client
 	jwtSecret []byte
 	jwtOpt    authn.Options
+	mailer    mailer.Mailer
 }
 
-func NewUserService(db *sql.DB, q *store.Queries, rdb *redis.Client, jwtSecret []byte, jwtOpt authn.Options) *UserService {
-	return &UserService{db: db, q: q, rdb: rdb, jwtSecret: jwtSecret, jwtOpt: jwtOpt}
+func NewUserService(db *sql.DB, q *store.Queries, rdb *redis.Client, jwtSecret []byte, jwtOpt authn.Options, m mailer.Mailer) *UserService {
+	return &UserService{db: db, q: q, rdb: rdb, jwtSecret: jwtSecret, jwtOpt: jwtOpt, mailer: m}
 }
 
 // --- Read-only “accessors” za druge delove aplikacije (privremeno rešenje) ---
@@ -181,39 +191,6 @@ func (s *UserService) Signup(ctx context.Context, req request.CreateUserRequest)
 	return out, nil
 }
 
-func (s *UserService) SendVerificationEmail(ctx context.Context, user map[string]any) error {
-
-	// email, ok := user["email"].(string)
-	// if !ok {
-	// 	return errors.New("invalid email format")
-	// }
-
-	userID, ok := user["id"].(float64) // ili string ako je string
-	if !ok {
-		return errors.New("invalid user ID format")
-	}
-	username, ok := user["username"].(string) // ili string ako je string
-	if !ok {
-		return errors.New("invalid username format")
-	}
-
-	// Generiši token (može JWT ili UUID)
-	token, err := authn.GenerateJWT(int64(userID), username, s.jwtSecret, s.jwtOpt)
-	if err != nil {
-		return &response.AppError{Code: "token_generation_error", Message: "Error generating a token", Status: 500}
-	}
-	// Sačuvaj token u bazi ako ne koristiš JWT (npr. tabela "email_verifications")
-
-	// Kreiraj verifikacioni link
-	link := fmt.Sprintf("https://tvojfrontend.com/verify?token=%s", token)
-
-	fmt.Println(link)
-	// Pošalji email
-	// body := fmt.Sprintf("Klikni na sledeći link da verifikuješ nalog: %s", link)
-	// return emailer.Send(email, "Verifikuj svoj nalog", body)
-	return nil
-}
-
 func (s *UserService) UpdateProfile(ctx context.Context, userID int32, req request.UpdateUserProfileRequest) (map[string]any, *response.AppError) {
 	// at least one field
 	if req.Username == nil && req.Email == nil && req.Name == nil && req.Country == nil &&
@@ -285,6 +262,146 @@ func (s *UserService) Delete(ctx context.Context, userID int32) *response.AppErr
 	}
 	_ = s.rdb.Del(ctx, cacheKeyUser(userID)).Err()
 	return nil
+}
+
+// SendVerificationEmail generiše verifikacioni token, snimi ga u bazu i pošalje e-mail sa linkom.
+func (s *UserService) SendVerificationEmail(ctx context.Context, user map[string]any) error {
+	// 1) Izvuci userID/email/username iz map-e (robusno)
+	var userID int32
+	switch v := user["id"].(type) {
+	case float64:
+		userID = int32(v)
+	case int:
+		userID = int32(v)
+	case int32:
+		userID = v
+	case int64:
+		userID = int32(v)
+	case string:
+		n, err := strconv.ParseInt(strings.TrimSpace(v), 10, 32)
+		if err != nil {
+			return fmt.Errorf("invalid user id string: %w", err)
+		}
+		userID = int32(n)
+	default:
+		return errors.New("invalid user id format")
+	}
+
+	email, _ := user["email"].(string)
+	username, _ := user["username"].(string)
+	if strings.TrimSpace(email) == "" {
+		return errors.New("user email missing")
+	}
+
+	// 2) Generiši kratak, kriptografski jak token (base64url bez paddinga)
+	token, err := generateVerificationToken(32) // 32B -> ~43-44 base64url karaktera
+	if err != nil {
+		return fmt.Errorf("token generate failed: %w", err)
+	}
+
+	// 3) TTL iz ENV (default 24h)
+	ttl := 24 * time.Hour
+	if v := strings.TrimSpace(os.Getenv("EMAIL_VERIFICATION_TTL")); v != "" {
+		if d, err := time.ParseDuration(v); err == nil {
+			ttl = d
+		}
+	}
+	validUntil := time.Now().Add(ttl)
+
+	// 4) Upis u tabelu email_verification_tokens
+	if _, err := s.q.CreateEmailVerificationToken(ctx, store.CreateEmailVerificationTokenParams{
+		UserID:     userID,
+		Token:      token,
+		ValidUntil: validUntil,
+	}); err != nil {
+		return fmt.Errorf("create email verification token failed: %w", err)
+	}
+
+	// 5) Napravi verifikacioni link (prefer front bazu iz ENV-a; fallback je API ruta)
+	base := strings.TrimSuffix(strings.TrimSpace(os.Getenv("EMAIL_VERIFY_BASE")), "/")
+	if base == "" {
+		base = "http://localhost:8081/cargo-agent/v1/users/verify-email"
+	}
+	link := fmt.Sprintf("%s?token=%s", base, token)
+
+	// 6) Renderuj HTML/TXT templejte i pošalji e-mail
+	//    (Pretpostavka: templates.MustInit() je pozvan u main() pri startu.)
+	subject, htmlBody, textBody, err := templates.RenderVerificationEmail(username, link, validUntil)
+	if err != nil {
+		return fmt.Errorf("render verification email failed: %w", err)
+	}
+
+	m, err := mailer.NewFromEnv()
+	if err != nil {
+		return fmt.Errorf("mailer init failed: %w", err)
+	}
+	if err := m.Send(email, subject, htmlBody, textBody); err != nil {
+		return fmt.Errorf("send verification email failed: %w", err)
+	}
+
+	return nil
+}
+
+// VerifyEmail potvrđuje token i aktivira korisnika.
+func (s *UserService) VerifyEmail(ctx context.Context, token string) *response.AppError {
+	token = strings.TrimSpace(token)
+	if token == "" {
+		return &response.AppError{Code: "invalid_token", Message: "Token is required", Status: 400}
+	}
+
+	// 1) Učitaj token iz DB
+	row, err := s.q.GetEmailVerificationToken(ctx, token)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return &response.AppError{Code: "invalid_token", Message: "Token not found", Status: 400}
+		}
+		return &response.AppError{Code: "db_error", Message: "Unable to load token", Status: 500}
+	}
+
+	// 2) Proveri istekao?
+	if time.Now().After(row.ValidUntil) {
+		// očisti token
+		_ = s.q.DeleteEmailVerificationToken(ctx, token)
+		return &response.AppError{Code: "token_expired", Message: "Token has expired", Status: 410}
+	}
+
+	// 3) Aktiviraj korisnika (iz draft → active; može i bez obzira na prethodni status)
+	now := time.Now()
+	err = s.q.UpdateUserStatus(ctx, store.UpdateUserStatusParams{
+		ID:     int32(row.UserID),
+		Status: models.UserStatusActive,
+		// updated_at se setuje u SQL-u na now(), ali ako ti treba dodatno:
+		// ovde ništa – query već radi SET updated_at = now()
+	})
+	if err != nil {
+		return &response.AppError{Code: "user_update_failed", Message: "Failed to activate user", Status: 500}
+	}
+
+	// 4) Očisti token (više nije potreban)
+	if err := s.q.DeleteEmailVerificationToken(ctx, token); err != nil {
+		// ne blokiramo uspeh – samo loguj
+		logger.Warn("failed to delete verification token", "error", err)
+	}
+
+	// 5) Po želji: očisti user cache
+	_ = s.rdb.Del(ctx, cacheKeyUser(int32(row.UserID))).Err()
+
+	logger.Info("user verified by email", "user_id", row.UserID, "at", now.Format(time.RFC3339))
+	return nil
+}
+
+// === helpers ===
+
+func generateVerificationToken(n int) (string, error) {
+	if n <= 0 {
+		n = 32
+	}
+	b := make([]byte, n)
+	if _, err := rand.Read(b); err != nil {
+		return "", fmt.Errorf("rand failed: %w", err)
+	}
+	// URL-safe bez '=' paddinga
+	return base64.RawURLEncoding.EncodeToString(b), nil
 }
 
 // --- helpers ---

@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/aleksjovanovic/cargo-agent/internal/authn"
 	"github.com/aleksjovanovic/cargo-agent/internal/dtos/request"
@@ -108,13 +109,35 @@ func (h *Handler) CreateUserHandler() http.HandlerFunc {
 			return
 		}
 
+		// fire-and-forget (ne blokiramo 201 ako email padne)
 		if err := h.Users.SendVerificationEmail(r.Context(), out); err != nil {
-			logger.Error("failed to send verification email", "error", err)
+			logger.Warn("failed to send verification email", "error", err)
 		}
 
 		response.RespondWithSuccess(w, http.StatusCreated, response.Envelope{
 			"message": "User created successfully",
 			"data":    out,
+		})
+	}
+}
+
+// GET /users/verify-email?token=...
+func (h *Handler) VerifyEmailHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		token := strings.TrimSpace(r.URL.Query().Get("token"))
+		if token == "" {
+			response.RespondWithError(w, http.StatusBadRequest, "invalid_token", "Token is required", nil)
+			return
+		}
+
+		if appErr := h.Users.VerifyEmail(r.Context(), token); appErr != nil {
+			response.RespondWithError(w, appErr.Status, appErr.Code, appErr.Message, appErr.Details)
+			return
+		}
+
+		response.RespondWithSuccess(w, http.StatusOK, response.Envelope{
+			"message": "Email verified successfully",
+			"data":    nil,
 		})
 	}
 }
