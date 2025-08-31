@@ -4,12 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/aleksjovanovic/cargo-agent/internal/authn"
 	"github.com/aleksjovanovic/cargo-agent/internal/dtos/request"
-	"github.com/aleksjovanovic/cargo-agent/internal/models"
 	"github.com/aleksjovanovic/cargo-agent/internal/response"
 	"github.com/aleksjovanovic/cargo-agent/internal/store"
 	"github.com/aleksjovanovic/cargo-agent/internal/utils"
@@ -162,10 +162,10 @@ func (s *UserService) Signup(ctx context.Context, req request.CreateUserRequest)
 		City:         req.City,
 		LegalAddress: req.LegalAddress,
 		VatNumber:    req.VatNumber,
-		Status:       models.UserStatus(req.Status),
-		Language:     req.Language,
-		CreatedAt:    sql.NullTime{Time: now, Valid: true},
-		UpdatedAt:    sql.NullTime{Time: now, Valid: true},
+		// Status:       models.UserStatus(req.Status),
+		Language:  req.Language,
+		CreatedAt: sql.NullTime{Time: now, Valid: true},
+		UpdatedAt: sql.NullTime{Time: now, Valid: true},
 	})
 	if err != nil {
 		return nil, &response.AppError{Code: "user_creation_failed", Message: "Failed to create user", Status: 500}
@@ -179,6 +179,39 @@ func (s *UserService) Signup(ctx context.Context, req request.CreateUserRequest)
 	var out map[string]any
 	_ = json.Unmarshal(raw, &out)
 	return out, nil
+}
+
+func (s *UserService) SendVerificationEmail(ctx context.Context, user map[string]any) error {
+
+	// email, ok := user["email"].(string)
+	// if !ok {
+	// 	return errors.New("invalid email format")
+	// }
+
+	userID, ok := user["id"].(float64) // ili string ako je string
+	if !ok {
+		return errors.New("invalid user ID format")
+	}
+	username, ok := user["username"].(string) // ili string ako je string
+	if !ok {
+		return errors.New("invalid username format")
+	}
+
+	// Generiši token (može JWT ili UUID)
+	token, err := authn.GenerateJWT(int64(userID), username, s.jwtSecret, s.jwtOpt)
+	if err != nil {
+		return &response.AppError{Code: "token_generation_error", Message: "Error generating a token", Status: 500}
+	}
+	// Sačuvaj token u bazi ako ne koristiš JWT (npr. tabela "email_verifications")
+
+	// Kreiraj verifikacioni link
+	link := fmt.Sprintf("https://tvojfrontend.com/verify?token=%s", token)
+
+	fmt.Println(link)
+	// Pošalji email
+	// body := fmt.Sprintf("Klikni na sledeći link da verifikuješ nalog: %s", link)
+	// return emailer.Send(email, "Verifikuj svoj nalog", body)
+	return nil
 }
 
 func (s *UserService) UpdateProfile(ctx context.Context, userID int32, req request.UpdateUserProfileRequest) (map[string]any, *response.AppError) {

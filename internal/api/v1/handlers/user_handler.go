@@ -6,6 +6,7 @@ import (
 
 	"github.com/aleksjovanovic/cargo-agent/internal/authn"
 	"github.com/aleksjovanovic/cargo-agent/internal/dtos/request"
+	"github.com/aleksjovanovic/cargo-agent/internal/logger"
 	"github.com/aleksjovanovic/cargo-agent/internal/middlewares"
 	"github.com/aleksjovanovic/cargo-agent/internal/response"
 	"github.com/aleksjovanovic/cargo-agent/internal/utils"
@@ -105,6 +106,10 @@ func (h *Handler) CreateUserHandler() http.HandlerFunc {
 		if appErr != nil {
 			response.RespondWithError(w, appErr.Status, appErr.Code, appErr.Message, appErr.Details)
 			return
+		}
+
+		if err := h.Users.SendVerificationEmail(r.Context(), out); err != nil {
+			logger.Error("failed to send verification email", "error", err)
 		}
 
 		response.RespondWithSuccess(w, http.StatusCreated, response.Envelope{

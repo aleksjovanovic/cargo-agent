@@ -30,24 +30,23 @@ func (q *Queries) ChangePassword(ctx context.Context, arg ChangePasswordParams) 
 }
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO users(username, email, password, name, country, city, legal_address, vat_number, status, language, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+INSERT INTO users(username, email, password, name, country, city, legal_address, vat_number, language, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 RETURNING id, username, email, name, country, city, legal_address, vat_number, status, language, created_at, updated_at
 `
 
 type CreateUserParams struct {
-	Username     string            `json:"username"`
-	Email        string            `json:"email"`
-	Password     string            `json:"password"`
-	Name         string            `json:"name"`
-	Country      string            `json:"country"`
-	City         string            `json:"city"`
-	LegalAddress string            `json:"legal_address"`
-	VatNumber    string            `json:"vat_number"`
-	Status       models.UserStatus `json:"status"`
-	Language     string            `json:"language"`
-	CreatedAt    sql.NullTime      `json:"created_at"`
-	UpdatedAt    sql.NullTime      `json:"updated_at"`
+	Username     string       `json:"username"`
+	Email        string       `json:"email"`
+	Password     string       `json:"password"`
+	Name         string       `json:"name"`
+	Country      string       `json:"country"`
+	City         string       `json:"city"`
+	LegalAddress string       `json:"legal_address"`
+	VatNumber    string       `json:"vat_number"`
+	Language     string       `json:"language"`
+	CreatedAt    sql.NullTime `json:"created_at"`
+	UpdatedAt    sql.NullTime `json:"updated_at"`
 }
 
 type CreateUserRow struct {
@@ -75,7 +74,6 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 		arg.City,
 		arg.LegalAddress,
 		arg.VatNumber,
-		arg.Status,
 		arg.Language,
 		arg.CreatedAt,
 		arg.UpdatedAt,

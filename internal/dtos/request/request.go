@@ -9,8 +9,8 @@ type CreateUserRequest struct {
 	City         string `json:"city"`
 	LegalAddress string `json:"legal_address"`
 	VatNumber    string `json:"vat_number"`
-	Status       string `json:"status"`
-	Language     string `json:"language"`
+	// Status       string `json:"status"`
+	Language string `json:"language"`
 }
 
 type UpdateUserProfileRequest struct {

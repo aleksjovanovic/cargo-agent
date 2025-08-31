@@ -6,7 +6,6 @@ import (
 	"unicode"
 
 	"github.com/aleksjovanovic/cargo-agent/internal/dtos/request"
-	"github.com/aleksjovanovic/cargo-agent/internal/models"
 )
 
 // ========== CREATE USER ==========
@@ -109,21 +108,21 @@ func ValidateCreateUserRequest(req *request.CreateUserRequest) error {
 		minMax("vat_number", v, 3, 30)
 	}
 
-	// Status: required, enum
-	if v := trim(req.Status); v == "" {
-		errs = append(errs, "status is required")
-	} else {
-		switch v {
-		case string(models.UserStatusActive),
-			string(models.UserStatusInactive),
-			string(models.UserStatusSuspended),
-			string(models.UserStatusDeleted),
-			string(models.UserStatusDraft):
-			// ok
-		default:
-			errs = append(errs, "status must be one of: active, inactive, suspended, deleted, draft")
-		}
-	}
+	// // Status: required, enum
+	// if v := trim(req.Status); v == "" {
+	// 	errs = append(errs, "status is required")
+	// } else {
+	// 	switch v {
+	// 	case string(models.UserStatusActive),
+	// 		string(models.UserStatusInactive),
+	// 		string(models.UserStatusSuspended),
+	// 		string(models.UserStatusDeleted),
+	// 		string(models.UserStatusDraft):
+	// 		// ok
+	// 	default:
+	// 		errs = append(errs, "status must be one of: active, inactive, suspended, deleted, draft")
+	// 	}
+	// }
 
 	// Language: required, exactly 2
 	if v := trim(req.Language); v == "" {

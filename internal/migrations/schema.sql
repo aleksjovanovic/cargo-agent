@@ -23,6 +23,15 @@ CREATE TABLE IF NOT EXISTS users (
     deleted_at TIMESTAMPTZ DEFAULT NULL
 );
 
+CREATE TABLE email_verification_tokens (
+    id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token TEXT NOT NULL UNIQUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    valid_until TIMESTAMP WITH TIME ZONE NOT NULL
+);
+
+
 -- Jedinstvena ograničenja (odvojeno da lakše debuguješ konflikte)
 DO $$
 BEGIN

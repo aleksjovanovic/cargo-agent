@@ -1,7 +1,25 @@
 -- name: CreateUser :one
-INSERT INTO users(username, email, password, name, country, city, legal_address, vat_number, status, language, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+INSERT INTO users(username, email, password, name, country, city, legal_address, vat_number, language, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 RETURNING id, username, email, name, country, city, legal_address, vat_number, status, language, created_at, updated_at;
+
+-- name: CreateEmailVerificationToken :one
+INSERT INTO email_verification_tokens (user_id, token, valid_until)
+VALUES ($1, $2, $3)
+RETURNING *;
+
+-- name: GetEmailVerificationToken :one
+SELECT * FROM email_verification_tokens
+WHERE token = $1
+LIMIT 1;
+
+-- name: DeleteEmailVerificationToken :exec
+DELETE FROM email_verification_tokens
+WHERE token = $1;
+
+-- name: DeleteExpiredEmailVerificationTokens :exec
+DELETE FROM email_verification_tokens
+WHERE valid_until < now();
 
 -- name: UpdateUserProfile :one
 UPDATE users

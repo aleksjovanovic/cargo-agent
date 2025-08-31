@@ -100,7 +100,6 @@ paths:
                   city: Nis
                   legal_address: "Some street 10, 18000 Nis"
                   vat_number: "RS123456789"
-                  status: active
                   language: en
       responses:
         '201':
@@ -972,11 +971,6 @@ components:
         vat_number:
           type: string
           example: "RS123456789"
-        status:
-          type: string
-          description: User status
-          enum: [active, inactive, suspended, deleted, draft]
-          example: active
         language:
           type: string
           example: en
