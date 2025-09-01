@@ -10,6 +10,7 @@ func SetupRoutes(mux *http.ServeMux, handler *handlers.Handler) {
 	SetupHealthCheckRoute(mux, handler)
 	SetupUserRoutes(mux, handler)
 	SetupCountryRoutes(mux, handler)
+	SetupCargoOfferRoutes(mux, handler)
 	SetupYamlRoute(mux, handler)
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {

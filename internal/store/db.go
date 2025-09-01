@@ -27,6 +27,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.changePasswordStmt, err = db.PrepareContext(ctx, changePassword); err != nil {
 		return nil, fmt.Errorf("error preparing query ChangePassword: %w", err)
 	}
+	if q.createCargoOfferStmt, err = db.PrepareContext(ctx, createCargoOffer); err != nil {
+		return nil, fmt.Errorf("error preparing query CreateCargoOffer: %w", err)
+	}
 	if q.createEmailVerificationTokenStmt, err = db.PrepareContext(ctx, createEmailVerificationToken); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateEmailVerificationToken: %w", err)
 	}
@@ -41,6 +44,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.deleteUserStmt, err = db.PrepareContext(ctx, deleteUser); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteUser: %w", err)
+	}
+	if q.getCargoOfferStmt, err = db.PrepareContext(ctx, getCargoOffer); err != nil {
+		return nil, fmt.Errorf("error preparing query GetCargoOffer: %w", err)
 	}
 	if q.getCountryByIDStmt, err = db.PrepareContext(ctx, getCountryByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetCountryByID: %w", err)
@@ -85,6 +91,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing changePasswordStmt: %w", cerr)
 		}
 	}
+	if q.createCargoOfferStmt != nil {
+		if cerr := q.createCargoOfferStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing createCargoOfferStmt: %w", cerr)
+		}
+	}
 	if q.createEmailVerificationTokenStmt != nil {
 		if cerr := q.createEmailVerificationTokenStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing createEmailVerificationTokenStmt: %w", cerr)
@@ -108,6 +119,11 @@ func (q *Queries) Close() error {
 	if q.deleteUserStmt != nil {
 		if cerr := q.deleteUserStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing deleteUserStmt: %w", cerr)
+		}
+	}
+	if q.getCargoOfferStmt != nil {
+		if cerr := q.getCargoOfferStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getCargoOfferStmt: %w", cerr)
 		}
 	}
 	if q.getCountryByIDStmt != nil {
@@ -205,11 +221,13 @@ type Queries struct {
 	db                                       DBTX
 	tx                                       *sql.Tx
 	changePasswordStmt                       *sql.Stmt
+	createCargoOfferStmt                     *sql.Stmt
 	createEmailVerificationTokenStmt         *sql.Stmt
 	createUserStmt                           *sql.Stmt
 	deleteEmailVerificationTokenStmt         *sql.Stmt
 	deleteExpiredEmailVerificationTokensStmt *sql.Stmt
 	deleteUserStmt                           *sql.Stmt
+	getCargoOfferStmt                        *sql.Stmt
 	getCountryByIDStmt                       *sql.Stmt
 	getCountryByNameStmt                     *sql.Stmt
 	getEmailVerificationTokenStmt            *sql.Stmt
@@ -228,11 +246,13 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		db:                                       tx,
 		tx:                                       tx,
 		changePasswordStmt:                       q.changePasswordStmt,
+		createCargoOfferStmt:                     q.createCargoOfferStmt,
 		createEmailVerificationTokenStmt:         q.createEmailVerificationTokenStmt,
 		createUserStmt:                           q.createUserStmt,
 		deleteEmailVerificationTokenStmt:         q.deleteEmailVerificationTokenStmt,
 		deleteExpiredEmailVerificationTokensStmt: q.deleteExpiredEmailVerificationTokensStmt,
 		deleteUserStmt:                           q.deleteUserStmt,
+		getCargoOfferStmt:                        q.getCargoOfferStmt,
 		getCountryByIDStmt:                       q.getCountryByIDStmt,
 		getCountryByNameStmt:                     q.getCountryByNameStmt,
 		getEmailVerificationTokenStmt:            q.getEmailVerificationTokenStmt,

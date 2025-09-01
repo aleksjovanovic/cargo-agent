@@ -98,3 +98,32 @@ SELECT id, name, country_id, latitude, longitude
 FROM cities
 WHERE country_id=$1
 ORDER BY name;
+
+-- name: CreateCargoOffer :one
+INSERT INTO cargo_offers (
+    created_by,
+    origin_country_id, origin_city_id,
+    destination_country_id, destination_city_id,
+    loading_places, unloading_places,
+    ready_to_load_by, delivery_deadline,
+    load_type, truck_type,
+    weight_t, volume_m3, pallets, palletized,
+    temperature_min_c, temperature_max_c,
+    published_at, expires_at,
+    price, currency, notes, status
+) VALUES (
+    $1,
+    $2, $3,
+    $4, $5,
+    $6, $7,
+    $8, $9,
+    $10, $11,
+    $12, $13, $14, $15,
+    $16, $17,
+    $18, $19,
+    $20, $21, $22, $23
+)
+RETURNING *;
+
+-- name: GetCargoOffer :one
+SELECT * FROM cargo_offers WHERE id = $1 LIMIT 1;

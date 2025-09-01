@@ -23,8 +23,10 @@ import (
 )
 
 func main() {
+	// 0) Učitaj template-ove (HTML e-mail itd.)
 	templates.MustInit()
-	// 1) Config
+
+	// 1) Konfiguracija
 	cfg, err := config.LoadConfig()
 	if err != nil {
 		logger.Fatal("Failed to load configuration", "error", err)
@@ -32,16 +34,17 @@ func main() {
 	if cfg.JWTSecret == "" {
 		logger.Fatal("JWT secret missing", "hint", "set JWT_SECRET_KEY in .env or environment")
 	}
-	// (legacy) — ako neki deo i dalje čita direktno iz env-a
+	// (legacy) — ako negde middleware čita direktno iz env-a
 	_ = os.Setenv("JWT_SECRET_KEY", cfg.JWTSecret)
 
-	// 2) Infra: DB & Redis
+	// 2) Infrastruktura: DB & Redis
 	db := config.ConnectDB(cfg.DatabaseURL)
 	defer db.Close()
 
 	rdb := config.ConnectRedis()
 	defer func(rdb *redis.Client) { _ = rdb.Close() }(rdb)
-	// Mailer
+
+	// Mailer (iz .env)
 	m, err := mailer.NewFromEnv()
 	if err != nil {
 		logger.Fatal("Mailer init failed", "error", err)
@@ -50,7 +53,7 @@ func main() {
 	// 3) sqlc queries
 	queries := store.New(db)
 
-	// 4) JWT opcije (prilagodi po potrebi)
+	// 4) JWT opcije
 	jwtOpt := authn.Options{
 		Issuer:        "AJ",
 		Audience:      []string{"cargo-agent"},
@@ -61,9 +64,10 @@ func main() {
 	// 5) Servisi
 	usersSvc := services.NewUserService(db, queries, rdb, []byte(cfg.JWTSecret), jwtOpt, m)
 	countriesSvc := services.NewCountryService(queries, rdb)
+	cargoSvc := services.NewCargoOfferService(db, queries)
 
-	// 6) HTTP handleri (tanki) — injektuju servise
-	handler := v1handlers.NewHandlers(usersSvc, countriesSvc)
+	// 6) HTTP handleri (tanki) — jedan “glavni” handler koji sadrži sve servise
+	handler := v1handlers.NewHandlers(usersSvc, countriesSvc, cargoSvc)
 
 	// 7) Rute (v1)
 	mux := http.NewServeMux()

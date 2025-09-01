@@ -11,6 +11,35 @@ import (
 	"github.com/aleksjovanovic/cargo-agent/internal/models"
 )
 
+type CargoOffer struct {
+	ID                   int32          `json:"id"`
+	CreatedBy            int32          `json:"created_by"`
+	OriginCountryID      int32          `json:"origin_country_id"`
+	OriginCityID         int32          `json:"origin_city_id"`
+	DestinationCountryID int32          `json:"destination_country_id"`
+	DestinationCityID    int32          `json:"destination_city_id"`
+	LoadingPlaces        int32          `json:"loading_places"`
+	UnloadingPlaces      int32          `json:"unloading_places"`
+	ReadyToLoadBy        time.Time      `json:"ready_to_load_by"`
+	DeliveryDeadline     time.Time      `json:"delivery_deadline"`
+	LoadType             interface{}    `json:"load_type"`
+	TruckType            interface{}    `json:"truck_type"`
+	WeightT              string         `json:"weight_t"`
+	VolumeM3             sql.NullString `json:"volume_m3"`
+	Pallets              sql.NullInt32  `json:"pallets"`
+	Palletized           sql.NullBool   `json:"palletized"`
+	TemperatureMinC      sql.NullString `json:"temperature_min_c"`
+	TemperatureMaxC      sql.NullString `json:"temperature_max_c"`
+	PublishedAt          sql.NullTime   `json:"published_at"`
+	ExpiresAt            sql.NullTime   `json:"expires_at"`
+	Price                sql.NullString `json:"price"`
+	Currency             sql.NullString `json:"currency"`
+	Notes                sql.NullString `json:"notes"`
+	Status               interface{}    `json:"status"`
+	CreatedAt            sql.NullTime   `json:"created_at"`
+	UpdatedAt            sql.NullTime   `json:"updated_at"`
+}
+
 type City struct {
 	ID        int32          `json:"id"`
 	Name      string         `json:"name"`

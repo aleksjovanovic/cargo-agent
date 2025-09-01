@@ -1,10 +1,39 @@
 package utils
 
-import "database/sql"
+import (
+	"database/sql"
+	"strconv"
+	"time"
+)
 
 func ToNullString(p *string) sql.NullString {
 	if p == nil {
 		return sql.NullString{Valid: false}
 	}
 	return sql.NullString{String: *p, Valid: true}
+}
+
+func SqlNullTimePtr(t *time.Time) sql.NullTime {
+	if t == nil {
+		return sql.NullTime{}
+	}
+	return sql.NullTime{Time: *t, Valid: true}
+}
+
+func ToNumericString(v float64) string {
+	return strconv.FormatFloat(v, 'f', 2, 64)
+}
+
+func ToNullNumericString(p *float64) sql.NullString {
+	if p == nil {
+		return sql.NullString{}
+	}
+	return sql.NullString{String: strconv.FormatFloat(*p, 'f', 2, 64), Valid: true}
+}
+
+func ToNullInt32(p *int32) sql.NullInt32 {
+	if p == nil {
+		return sql.NullInt32{}
+	}
+	return sql.NullInt32{Int32: *p, Valid: true}
 }

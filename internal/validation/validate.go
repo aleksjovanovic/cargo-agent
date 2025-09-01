@@ -3,6 +3,7 @@ package validation
 import (
 	"fmt"
 	"strings"
+	"time"
 	"unicode"
 
 	"github.com/aleksjovanovic/cargo-agent/internal/dtos/request"
@@ -346,6 +347,73 @@ func ValidateChangePasswordRequest(newPassword string) error {
 
 	if len(errs) > 0 {
 		return fmt.Errorf(strings.Join(errs, "; "))
+	}
+	return nil
+}
+
+func ValidateCreateCargoOffer(req *request.CreateCargoOfferRequest) error {
+	var errs []string
+	add := func(s string) { errs = append(errs, s) }
+
+	// ids
+	if req.OriginCountryID <= 0 || req.OriginCityID <= 0 {
+		add("origin_country_id and origin_city_id must be > 0")
+	}
+	if req.DestinationCountryID <= 0 || req.DestinationCityID <= 0 {
+		add("destination_country_id and destination_city_id must be > 0")
+	}
+	if req.LoadingPlaces <= 0 {
+		add("loading_places must be >= 1")
+	}
+	if req.UnloadingPlaces <= 0 {
+		add("unloading_places must be >= 1")
+	}
+
+	// times
+	rtl, err1 := time.Parse(time.RFC3339, strings.TrimSpace(req.ReadyToLoadBy))
+	ddl, err2 := time.Parse(time.RFC3339, strings.TrimSpace(req.DeliveryDeadline))
+	if err1 != nil {
+		add("ready_to_load_by must be RFC3339")
+	}
+	if err2 != nil {
+		add("delivery_deadline must be RFC3339")
+	}
+	if err1 == nil && err2 == nil && !ddl.After(rtl) {
+		add("delivery_deadline must be after ready_to_load_by")
+	}
+
+	// enums
+	switch strings.ToLower(strings.TrimSpace(req.LoadType)) {
+	case "ftl", "ltl":
+	default:
+		add("load_type must be ftl or ltl")
+	}
+	switch strings.ToLower(strings.TrimSpace(req.TruckType)) {
+	case "refrigerator", "curtain", "box", "flatbed", "tanker", "container", "other":
+	default:
+		add("truck_type invalid")
+	}
+
+	// weight/volume
+	if req.WeightT <= 0 {
+		add("weight_t must be > 0")
+	}
+	if req.VolumeM3 != nil && *req.VolumeM3 < 0 {
+		add("volume_m3 must be >= 0")
+	}
+	if req.Pallets != nil && *req.Pallets < 0 {
+		add("pallets must be >= 0")
+	}
+
+	// temperature (ako se koristi)
+	if req.TemperatureMinC != nil && req.TemperatureMaxC != nil {
+		if *req.TemperatureMaxC < *req.TemperatureMinC {
+			add("temperature_max_c must be >= temperature_min_c")
+		}
+	}
+
+	if len(errs) > 0 {
+		return fmt.Errorf(strings.Join(errs, ", "))
 	}
 	return nil
 }

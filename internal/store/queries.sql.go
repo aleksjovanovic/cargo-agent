@@ -30,6 +30,117 @@ func (q *Queries) ChangePassword(ctx context.Context, arg ChangePasswordParams) 
 	return err
 }
 
+const createCargoOffer = `-- name: CreateCargoOffer :one
+INSERT INTO cargo_offers (
+    created_by,
+    origin_country_id, origin_city_id,
+    destination_country_id, destination_city_id,
+    loading_places, unloading_places,
+    ready_to_load_by, delivery_deadline,
+    load_type, truck_type,
+    weight_t, volume_m3, pallets, palletized,
+    temperature_min_c, temperature_max_c,
+    published_at, expires_at,
+    price, currency, notes, status
+) VALUES (
+    $1,
+    $2, $3,
+    $4, $5,
+    $6, $7,
+    $8, $9,
+    $10, $11,
+    $12, $13, $14, $15,
+    $16, $17,
+    $18, $19,
+    $20, $21, $22, $23
+)
+RETURNING id, created_by, origin_country_id, origin_city_id, destination_country_id, destination_city_id, loading_places, unloading_places, ready_to_load_by, delivery_deadline, load_type, truck_type, weight_t, volume_m3, pallets, palletized, temperature_min_c, temperature_max_c, published_at, expires_at, price, currency, notes, status, created_at, updated_at
+`
+
+type CreateCargoOfferParams struct {
+	CreatedBy            int32          `json:"created_by"`
+	OriginCountryID      int32          `json:"origin_country_id"`
+	OriginCityID         int32          `json:"origin_city_id"`
+	DestinationCountryID int32          `json:"destination_country_id"`
+	DestinationCityID    int32          `json:"destination_city_id"`
+	LoadingPlaces        int32          `json:"loading_places"`
+	UnloadingPlaces      int32          `json:"unloading_places"`
+	ReadyToLoadBy        time.Time      `json:"ready_to_load_by"`
+	DeliveryDeadline     time.Time      `json:"delivery_deadline"`
+	LoadType             interface{}    `json:"load_type"`
+	TruckType            interface{}    `json:"truck_type"`
+	WeightT              string         `json:"weight_t"`
+	VolumeM3             sql.NullString `json:"volume_m3"`
+	Pallets              sql.NullInt32  `json:"pallets"`
+	Palletized           sql.NullBool   `json:"palletized"`
+	TemperatureMinC      sql.NullString `json:"temperature_min_c"`
+	TemperatureMaxC      sql.NullString `json:"temperature_max_c"`
+	PublishedAt          sql.NullTime   `json:"published_at"`
+	ExpiresAt            sql.NullTime   `json:"expires_at"`
+	Price                sql.NullString `json:"price"`
+	Currency             sql.NullString `json:"currency"`
+	Notes                sql.NullString `json:"notes"`
+	Status               interface{}    `json:"status"`
+}
+
+func (q *Queries) CreateCargoOffer(ctx context.Context, arg CreateCargoOfferParams) (CargoOffer, error) {
+	row := q.queryRow(ctx, q.createCargoOfferStmt, createCargoOffer,
+		arg.CreatedBy,
+		arg.OriginCountryID,
+		arg.OriginCityID,
+		arg.DestinationCountryID,
+		arg.DestinationCityID,
+		arg.LoadingPlaces,
+		arg.UnloadingPlaces,
+		arg.ReadyToLoadBy,
+		arg.DeliveryDeadline,
+		arg.LoadType,
+		arg.TruckType,
+		arg.WeightT,
+		arg.VolumeM3,
+		arg.Pallets,
+		arg.Palletized,
+		arg.TemperatureMinC,
+		arg.TemperatureMaxC,
+		arg.PublishedAt,
+		arg.ExpiresAt,
+		arg.Price,
+		arg.Currency,
+		arg.Notes,
+		arg.Status,
+	)
+	var i CargoOffer
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedBy,
+		&i.OriginCountryID,
+		&i.OriginCityID,
+		&i.DestinationCountryID,
+		&i.DestinationCityID,
+		&i.LoadingPlaces,
+		&i.UnloadingPlaces,
+		&i.ReadyToLoadBy,
+		&i.DeliveryDeadline,
+		&i.LoadType,
+		&i.TruckType,
+		&i.WeightT,
+		&i.VolumeM3,
+		&i.Pallets,
+		&i.Palletized,
+		&i.TemperatureMinC,
+		&i.TemperatureMaxC,
+		&i.PublishedAt,
+		&i.ExpiresAt,
+		&i.Price,
+		&i.Currency,
+		&i.Notes,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const createEmailVerificationToken = `-- name: CreateEmailVerificationToken :one
 INSERT INTO email_verification_tokens (user_id, token, valid_until)
 VALUES ($1, $2, $3)
@@ -157,6 +268,44 @@ type DeleteUserParams struct {
 func (q *Queries) DeleteUser(ctx context.Context, arg DeleteUserParams) error {
 	_, err := q.exec(ctx, q.deleteUserStmt, deleteUser, arg.ID, arg.DeletedAt)
 	return err
+}
+
+const getCargoOffer = `-- name: GetCargoOffer :one
+SELECT id, created_by, origin_country_id, origin_city_id, destination_country_id, destination_city_id, loading_places, unloading_places, ready_to_load_by, delivery_deadline, load_type, truck_type, weight_t, volume_m3, pallets, palletized, temperature_min_c, temperature_max_c, published_at, expires_at, price, currency, notes, status, created_at, updated_at FROM cargo_offers WHERE id = $1 LIMIT 1
+`
+
+func (q *Queries) GetCargoOffer(ctx context.Context, id int32) (CargoOffer, error) {
+	row := q.queryRow(ctx, q.getCargoOfferStmt, getCargoOffer, id)
+	var i CargoOffer
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedBy,
+		&i.OriginCountryID,
+		&i.OriginCityID,
+		&i.DestinationCountryID,
+		&i.DestinationCityID,
+		&i.LoadingPlaces,
+		&i.UnloadingPlaces,
+		&i.ReadyToLoadBy,
+		&i.DeliveryDeadline,
+		&i.LoadType,
+		&i.TruckType,
+		&i.WeightT,
+		&i.VolumeM3,
+		&i.Pallets,
+		&i.Palletized,
+		&i.TemperatureMinC,
+		&i.TemperatureMaxC,
+		&i.PublishedAt,
+		&i.ExpiresAt,
+		&i.Price,
+		&i.Currency,
+		&i.Notes,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const getCountryByID = `-- name: GetCountryByID :one

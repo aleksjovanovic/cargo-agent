@@ -29923,3 +29923,64 @@ INSERT INTO cities (name, country_id, latitude, longitude) VALUES
 ('Zuzgen', 41, 47.52508, 7.89986),
 ('Zwillikon', 41, 47.28833, 8.43124)
 ON CONFLICT DO NOTHING;
+
+-- enum-i
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'truck_type') THEN
+        CREATE TYPE truck_type AS ENUM ('refrigerator','curtain','box','flatbed','tanker','container','other');
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'load_type') THEN
+        CREATE TYPE load_type AS ENUM ('ftl','ltl');
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'offer_status') THEN
+        CREATE TYPE offer_status AS ENUM ('draft','published','expired','cancelled');
+    END IF;
+END
+$$;
+
+CREATE TABLE IF NOT EXISTS cargo_offers (
+    id SERIAL PRIMARY KEY,
+
+    created_by INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+
+    origin_country_id      INT NOT NULL REFERENCES countries(id),
+    origin_city_id         INT NOT NULL REFERENCES cities(id),
+    destination_country_id INT NOT NULL REFERENCES countries(id),
+    destination_city_id    INT NOT NULL REFERENCES cities(id),
+
+    loading_places   INT NOT NULL DEFAULT 1,
+    unloading_places INT NOT NULL DEFAULT 1,
+
+    ready_to_load_by    TIMESTAMPTZ NOT NULL,
+    delivery_deadline   TIMESTAMPTZ NOT NULL,
+
+    load_type  load_type  NOT NULL,              -- ftl/ltl
+    truck_type truck_type NOT NULL,              -- refrigerator/curtain/...
+
+    weight_t   NUMERIC(10,2) NOT NULL,          -- u tonama (npr 24.0)
+    volume_m3  NUMERIC(10,2),                    -- opcionalno
+    pallets    INT,                              -- broj paleta
+    palletized BOOLEAN DEFAULT FALSE,
+
+    temperature_min_c NUMERIC(5,2),             -- za frigo
+    temperature_max_c NUMERIC(5,2),
+
+    published_at TIMESTAMPTZ DEFAULT now(),
+    expires_at   TIMESTAMPTZ,
+
+    price     NUMERIC(12,2),
+    currency  CHAR(3) DEFAULT 'EUR',
+
+    notes TEXT,
+
+    status offer_status NOT NULL DEFAULT 'published',
+
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_cargo_offers_origin  ON cargo_offers(origin_country_id, origin_city_id);
+CREATE INDEX IF NOT EXISTS idx_cargo_offers_dest    ON cargo_offers(destination_country_id, destination_city_id);
+CREATE INDEX IF NOT EXISTS idx_cargo_offers_status  ON cargo_offers(status);
+CREATE INDEX IF NOT EXISTS idx_cargo_offers_expires ON cargo_offers(expires_at);
