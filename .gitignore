@@ -24,3 +24,5 @@
 # OS fajlovi
 .DS_Store
 Thumbs.db
+
+.env
