@@ -7,7 +7,7 @@ import (
 )
 
 func SetupRoutes(mux *http.ServeMux, handler *handlers.Handler) {
-	SetupHealthCheckRoute(mux, handler)
+	// SetupHealthCheckRoute(mux, handler)
 	SetupUserRoutes(mux, handler)
 	SetupCountryRoutes(mux, handler)
 	SetupCargoOfferRoutes(mux, handler)

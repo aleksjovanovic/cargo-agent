@@ -15,8 +15,10 @@ func SetupCargoOfferRoutes(mux *http.ServeMux, handler *handlers.Handler) {
 	auth := middlewares.Authz([]byte(os.Getenv("JWT_SECRET_KEY")))
 
 	// POST /cargo-offers
-	newMux.Handle("POST /cargo-agent/v1/cargo-offers", auth(http.HandlerFunc(handler.Create())))
+	newMux.Handle("POST /cargo-offers", auth(http.HandlerFunc(handler.Create())))
 
 	// GET /cargo-offers/{id}
-	newMux.Handle("GET /cargo-agent/v1/cargo-offers/{id}", http.HandlerFunc(handler.GetByID()))
+	newMux.Handle("GET /cargo-offers/{id}", http.HandlerFunc(handler.GetByID()))
+
+	mux.Handle("/cargo-agent/v1/", http.StripPrefix("/cargo-agent/v1", newMux))
 }
