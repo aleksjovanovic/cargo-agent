@@ -3,6 +3,7 @@ package utils
 import (
 	"database/sql"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -11,6 +12,17 @@ func ToNullString(p *string) sql.NullString {
 		return sql.NullString{Valid: false}
 	}
 	return sql.NullString{String: *p, Valid: true}
+}
+
+func ToLowerNullString(p *string) sql.NullString {
+	if p == nil {
+		return sql.NullString{Valid: false}
+	}
+	v := strings.TrimSpace(*p)
+	if v == "" {
+		return sql.NullString{Valid: false}
+	}
+	return sql.NullString{String: strings.ToLower(v), Valid: true}
 }
 
 func SqlNullTimePtr(t *time.Time) sql.NullTime {

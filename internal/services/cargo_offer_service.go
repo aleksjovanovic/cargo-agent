@@ -170,17 +170,17 @@ func (s *CargoOfferService) List(ctx context.Context, q request.ListCargoOffersQ
 	}
 
 	rows, err := s.q.ListCargoOffers(ctx, store.ListCargoOffersParams{
-		OriginCountryID:      q.OriginCountryID,
-		OriginCityID:         q.OriginCityID,
-		DestinationCountryID: q.DestinationCountryID,
-		DestinationCityID:    q.DestinationCityID,
-		LoadType:             q.LoadType,  // string → enum u SQL-u (cast)
-		TruckType:            q.TruckType, // string → enum u SQL-u (cast)
-		Status:               q.Status,    // string → enum u SQL-u (cast)
-		ReadyFrom:            readyFrom,
-		ReadyTo:              readyTo,
-		DeliveryFrom:         deliveryFrom,
-		DeliveryTo:           deliveryTo,
+		OriginCountryID:      utils.ToNullInt32(q.OriginCountryID),
+		OriginCityID:         utils.ToNullInt32(q.OriginCityID),
+		DestinationCountryID: utils.ToNullInt32(q.DestinationCountryID),
+		DestinationCityID:    utils.ToNullInt32(q.DestinationCityID),
+		LoadType:             utils.ToLowerNullString(q.LoadType),  // string → enum u SQL-u (cast)
+		TruckType:            utils.ToLowerNullString(q.TruckType), // string → enum u SQL-u (cast)
+		Status:               utils.ToLowerNullString(q.Status),    // string → enum u SQL-u (cast)
+		ReadyFrom:            utils.SqlNullTimePtr(readyFrom),
+		ReadyTo:              utils.SqlNullTimePtr(readyTo),
+		DeliveryFrom:         utils.SqlNullTimePtr(deliveryFrom),
+		DeliveryTo:           utils.SqlNullTimePtr(deliveryTo),
 		Limit:                limit,
 		Offset:               offset,
 	})
