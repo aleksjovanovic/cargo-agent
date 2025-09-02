@@ -125,3 +125,72 @@ func (s *CargoOfferService) Get(ctx context.Context, id int32) (map[string]any, 
 	_ = json.Unmarshal(raw, &out)
 	return out, nil
 }
+
+// List vraća kolekciju ponuda sa filtrima i paginacijom.
+func (s *CargoOfferService) List(ctx context.Context, q request.ListCargoOffersQuery) ([]map[string]any, *response.AppError) {
+	limit := int32(20)
+	if q.Limit != nil && *q.Limit > 0 {
+		limit = *q.Limit
+		if limit > 100 {
+			limit = 100
+		}
+	}
+	page := int32(1)
+	if q.Page != nil && *q.Page > 0 {
+		page = *q.Page
+	}
+	offset := (page - 1) * limit
+
+	parseTime := func(p *string) (*time.Time, *response.AppError) {
+		if p == nil || strings.TrimSpace(*p) == "" {
+			return nil, nil
+		}
+		t, err := time.Parse(time.RFC3339, strings.TrimSpace(*p))
+		if err != nil {
+			return nil, &response.AppError{Code: "bad_request", Message: "invalid time format (use RFC3339)", Status: 400}
+		}
+		return &t, nil
+	}
+
+	readyFrom, appErr := parseTime(q.ReadyFrom)
+	if appErr != nil {
+		return nil, appErr
+	}
+	readyTo, appErr := parseTime(q.ReadyTo)
+	if appErr != nil {
+		return nil, appErr
+	}
+	deliveryFrom, appErr := parseTime(q.DeliveryFrom)
+	if appErr != nil {
+		return nil, appErr
+	}
+	deliveryTo, appErr := parseTime(q.DeliveryTo)
+	if appErr != nil {
+		return nil, appErr
+	}
+
+	rows, err := s.q.ListCargoOffers(ctx, store.ListCargoOffersParams{
+		OriginCountryID:      q.OriginCountryID,
+		OriginCityID:         q.OriginCityID,
+		DestinationCountryID: q.DestinationCountryID,
+		DestinationCityID:    q.DestinationCityID,
+		LoadType:             q.LoadType,  // string → enum u SQL-u (cast)
+		TruckType:            q.TruckType, // string → enum u SQL-u (cast)
+		Status:               q.Status,    // string → enum u SQL-u (cast)
+		ReadyFrom:            readyFrom,
+		ReadyTo:              readyTo,
+		DeliveryFrom:         deliveryFrom,
+		DeliveryTo:           deliveryTo,
+		Limit:                limit,
+		Offset:               offset,
+	})
+	if err != nil {
+		return nil, &response.AppError{Code: "list_failed", Message: "Failed to list cargo offers", Status: 500}
+	}
+
+	// marshal → unmarshal da dobijemo []map[string]any (isti izlaz kao create/get)
+	raw, _ := json.Marshal(rows)
+	var out []map[string]any
+	_ = json.Unmarshal(raw, &out)
+	return out, nil
+}

@@ -29927,17 +29927,19 @@ ON CONFLICT DO NOTHING;
 -- enum-i
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'truck_type') THEN
-        CREATE TYPE truck_type AS ENUM ('refrigerator','curtain','box','flatbed','tanker','container','other');
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'load_type') THEN
-        CREATE TYPE load_type AS ENUM ('ftl','ltl');
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'offer_status') THEN
-        CREATE TYPE offer_status AS ENUM ('draft','published','expired','cancelled');
-    END IF;
-END
-$$;
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'load_type') THEN
+    CREATE TYPE load_type AS ENUM ('ftl', 'ltl');
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'truck_type') THEN
+    CREATE TYPE truck_type AS ENUM ('refrigerator','curtain','box','flatbed','tanker','container','other');
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'offer_status') THEN
+    CREATE TYPE offer_status AS ENUM ('draft','published','expired','cancelled','closed');
+  END IF;
+END $$;
+
 
 CREATE TABLE IF NOT EXISTS cargo_offers (
     id SERIAL PRIMARY KEY,

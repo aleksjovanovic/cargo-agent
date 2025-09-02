@@ -7,8 +7,6 @@ package store
 import (
 	"database/sql"
 	"time"
-
-	"github.com/aleksjovanovic/cargo-agent/internal/models"
 )
 
 type CargoOffer struct {
@@ -22,8 +20,8 @@ type CargoOffer struct {
 	UnloadingPlaces      int32          `json:"unloading_places"`
 	ReadyToLoadBy        time.Time      `json:"ready_to_load_by"`
 	DeliveryDeadline     time.Time      `json:"delivery_deadline"`
-	LoadType             interface{}    `json:"load_type"`
-	TruckType            interface{}    `json:"truck_type"`
+	LoadType             string         `json:"load_type"`
+	TruckType            string         `json:"truck_type"`
 	WeightT              string         `json:"weight_t"`
 	VolumeM3             sql.NullString `json:"volume_m3"`
 	Pallets              sql.NullInt32  `json:"pallets"`
@@ -35,7 +33,7 @@ type CargoOffer struct {
 	Price                sql.NullString `json:"price"`
 	Currency             sql.NullString `json:"currency"`
 	Notes                sql.NullString `json:"notes"`
-	Status               interface{}    `json:"status"`
+	Status               string         `json:"status"`
 	CreatedAt            sql.NullTime   `json:"created_at"`
 	UpdatedAt            sql.NullTime   `json:"updated_at"`
 }
@@ -63,21 +61,4 @@ type EmailVerificationToken struct {
 	Token      string    `json:"token"`
 	CreatedAt  time.Time `json:"created_at"`
 	ValidUntil time.Time `json:"valid_until"`
-}
-
-type User struct {
-	ID           int32             `json:"id"`
-	Username     string            `json:"username"`
-	Email        string            `json:"email"`
-	Password     string            `json:"password"`
-	Name         string            `json:"name"`
-	Country      string            `json:"country"`
-	City         string            `json:"city"`
-	LegalAddress string            `json:"legal_address"`
-	VatNumber    string            `json:"vat_number"`
-	Status       models.UserStatus `json:"status"`
-	Language     string            `json:"language"`
-	CreatedAt    sql.NullTime      `json:"created_at"`
-	UpdatedAt    sql.NullTime      `json:"updated_at"`
-	DeletedAt    sql.NullTime      `json:"deleted_at"`
 }

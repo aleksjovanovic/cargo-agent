@@ -13,7 +13,7 @@ import (
 	"github.com/aleksjovanovic/cargo-agent/internal/models"
 )
 
-const changePassword = `-- name: ChangePassword :exec
+const ChangePassword = `-- name: ChangePassword :exec
 UPDATE users
 SET password=$2, updated_at=$3
 WHERE id = $1
@@ -26,11 +26,11 @@ type ChangePasswordParams struct {
 }
 
 func (q *Queries) ChangePassword(ctx context.Context, arg ChangePasswordParams) error {
-	_, err := q.exec(ctx, q.changePasswordStmt, changePassword, arg.ID, arg.Password, arg.UpdatedAt)
+	_, err := q.exec(ctx, q.changePasswordStmt, ChangePassword, arg.ID, arg.Password, arg.UpdatedAt)
 	return err
 }
 
-const createCargoOffer = `-- name: CreateCargoOffer :one
+const CreateCargoOffer = `-- name: CreateCargoOffer :one
 INSERT INTO cargo_offers (
     created_by,
     origin_country_id, origin_city_id,
@@ -48,13 +48,29 @@ INSERT INTO cargo_offers (
     $4, $5,
     $6, $7,
     $8, $9,
-    $10, $11,
+    $10::load_type,
+    $11::truck_type,
     $12, $13, $14, $15,
     $16, $17,
     $18, $19,
-    $20, $21, $22, $23
+    $20, $21, $22,
+    $23::offer_status
 )
-RETURNING id, created_by, origin_country_id, origin_city_id, destination_country_id, destination_city_id, loading_places, unloading_places, ready_to_load_by, delivery_deadline, load_type, truck_type, weight_t, volume_m3, pallets, palletized, temperature_min_c, temperature_max_c, published_at, expires_at, price, currency, notes, status, created_at, updated_at
+RETURNING
+    id,
+    created_by,
+    origin_country_id, origin_city_id,
+    destination_country_id, destination_city_id,
+    loading_places, unloading_places,
+    ready_to_load_by, delivery_deadline,
+    load_type::text   AS load_type,
+    truck_type::text  AS truck_type,
+    weight_t, volume_m3, pallets, palletized,
+    temperature_min_c, temperature_max_c,
+    published_at, expires_at,
+    price, currency, notes,
+    status::text      AS status,
+    created_at, updated_at
 `
 
 type CreateCargoOfferParams struct {
@@ -67,8 +83,8 @@ type CreateCargoOfferParams struct {
 	UnloadingPlaces      int32          `json:"unloading_places"`
 	ReadyToLoadBy        time.Time      `json:"ready_to_load_by"`
 	DeliveryDeadline     time.Time      `json:"delivery_deadline"`
-	LoadType             interface{}    `json:"load_type"`
-	TruckType            interface{}    `json:"truck_type"`
+	LoadType             string         `json:"load_type"`
+	TruckType            string         `json:"truck_type"`
 	WeightT              string         `json:"weight_t"`
 	VolumeM3             sql.NullString `json:"volume_m3"`
 	Pallets              sql.NullInt32  `json:"pallets"`
@@ -80,11 +96,40 @@ type CreateCargoOfferParams struct {
 	Price                sql.NullString `json:"price"`
 	Currency             sql.NullString `json:"currency"`
 	Notes                sql.NullString `json:"notes"`
-	Status               interface{}    `json:"status"`
+	Status               string         `json:"status"`
 }
 
-func (q *Queries) CreateCargoOffer(ctx context.Context, arg CreateCargoOfferParams) (CargoOffer, error) {
-	row := q.queryRow(ctx, q.createCargoOfferStmt, createCargoOffer,
+type CreateCargoOfferRow struct {
+	ID                   int32          `json:"id"`
+	CreatedBy            int32          `json:"created_by"`
+	OriginCountryID      int32          `json:"origin_country_id"`
+	OriginCityID         int32          `json:"origin_city_id"`
+	DestinationCountryID int32          `json:"destination_country_id"`
+	DestinationCityID    int32          `json:"destination_city_id"`
+	LoadingPlaces        int32          `json:"loading_places"`
+	UnloadingPlaces      int32          `json:"unloading_places"`
+	ReadyToLoadBy        time.Time      `json:"ready_to_load_by"`
+	DeliveryDeadline     time.Time      `json:"delivery_deadline"`
+	LoadType             string         `json:"load_type"`
+	TruckType            string         `json:"truck_type"`
+	WeightT              string         `json:"weight_t"`
+	VolumeM3             sql.NullString `json:"volume_m3"`
+	Pallets              sql.NullInt32  `json:"pallets"`
+	Palletized           sql.NullBool   `json:"palletized"`
+	TemperatureMinC      sql.NullString `json:"temperature_min_c"`
+	TemperatureMaxC      sql.NullString `json:"temperature_max_c"`
+	PublishedAt          sql.NullTime   `json:"published_at"`
+	ExpiresAt            sql.NullTime   `json:"expires_at"`
+	Price                sql.NullString `json:"price"`
+	Currency             sql.NullString `json:"currency"`
+	Notes                sql.NullString `json:"notes"`
+	Status               string         `json:"status"`
+	CreatedAt            sql.NullTime   `json:"created_at"`
+	UpdatedAt            sql.NullTime   `json:"updated_at"`
+}
+
+func (q *Queries) CreateCargoOffer(ctx context.Context, arg CreateCargoOfferParams) (CreateCargoOfferRow, error) {
+	row := q.queryRow(ctx, q.createCargoOfferStmt, CreateCargoOffer,
 		arg.CreatedBy,
 		arg.OriginCountryID,
 		arg.OriginCityID,
@@ -109,7 +154,7 @@ func (q *Queries) CreateCargoOffer(ctx context.Context, arg CreateCargoOfferPara
 		arg.Notes,
 		arg.Status,
 	)
-	var i CargoOffer
+	var i CreateCargoOfferRow
 	err := row.Scan(
 		&i.ID,
 		&i.CreatedBy,
@@ -141,7 +186,7 @@ func (q *Queries) CreateCargoOffer(ctx context.Context, arg CreateCargoOfferPara
 	return i, err
 }
 
-const createEmailVerificationToken = `-- name: CreateEmailVerificationToken :one
+const CreateEmailVerificationToken = `-- name: CreateEmailVerificationToken :one
 INSERT INTO email_verification_tokens (user_id, token, valid_until)
 VALUES ($1, $2, $3)
 RETURNING id, user_id, token, created_at, valid_until
@@ -154,7 +199,7 @@ type CreateEmailVerificationTokenParams struct {
 }
 
 func (q *Queries) CreateEmailVerificationToken(ctx context.Context, arg CreateEmailVerificationTokenParams) (EmailVerificationToken, error) {
-	row := q.queryRow(ctx, q.createEmailVerificationTokenStmt, createEmailVerificationToken, arg.UserID, arg.Token, arg.ValidUntil)
+	row := q.queryRow(ctx, q.createEmailVerificationTokenStmt, CreateEmailVerificationToken, arg.UserID, arg.Token, arg.ValidUntil)
 	var i EmailVerificationToken
 	err := row.Scan(
 		&i.ID,
@@ -166,7 +211,7 @@ func (q *Queries) CreateEmailVerificationToken(ctx context.Context, arg CreateEm
 	return i, err
 }
 
-const createUser = `-- name: CreateUser :one
+const CreateUser = `-- name: CreateUser :one
 INSERT INTO users(username, email, password, name, country, city, legal_address, vat_number, language, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 RETURNING id, username, email, name, country, city, legal_address, vat_number, status, language, created_at, updated_at
@@ -202,7 +247,7 @@ type CreateUserRow struct {
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateUserRow, error) {
-	row := q.queryRow(ctx, q.createUserStmt, createUser,
+	row := q.queryRow(ctx, q.createUserStmt, CreateUser,
 		arg.Username,
 		arg.Email,
 		arg.Password,
@@ -233,27 +278,27 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 	return i, err
 }
 
-const deleteEmailVerificationToken = `-- name: DeleteEmailVerificationToken :exec
+const DeleteEmailVerificationToken = `-- name: DeleteEmailVerificationToken :exec
 DELETE FROM email_verification_tokens
 WHERE token = $1
 `
 
 func (q *Queries) DeleteEmailVerificationToken(ctx context.Context, token string) error {
-	_, err := q.exec(ctx, q.deleteEmailVerificationTokenStmt, deleteEmailVerificationToken, token)
+	_, err := q.exec(ctx, q.deleteEmailVerificationTokenStmt, DeleteEmailVerificationToken, token)
 	return err
 }
 
-const deleteExpiredEmailVerificationTokens = `-- name: DeleteExpiredEmailVerificationTokens :exec
+const DeleteExpiredEmailVerificationTokens = `-- name: DeleteExpiredEmailVerificationTokens :exec
 DELETE FROM email_verification_tokens
 WHERE valid_until < now()
 `
 
 func (q *Queries) DeleteExpiredEmailVerificationTokens(ctx context.Context) error {
-	_, err := q.exec(ctx, q.deleteExpiredEmailVerificationTokensStmt, deleteExpiredEmailVerificationTokens)
+	_, err := q.exec(ctx, q.deleteExpiredEmailVerificationTokensStmt, DeleteExpiredEmailVerificationTokens)
 	return err
 }
 
-const deleteUser = `-- name: DeleteUser :exec
+const DeleteUser = `-- name: DeleteUser :exec
 UPDATE users
 SET status = 'deleted',
     deleted_at = $2
@@ -266,17 +311,63 @@ type DeleteUserParams struct {
 }
 
 func (q *Queries) DeleteUser(ctx context.Context, arg DeleteUserParams) error {
-	_, err := q.exec(ctx, q.deleteUserStmt, deleteUser, arg.ID, arg.DeletedAt)
+	_, err := q.exec(ctx, q.deleteUserStmt, DeleteUser, arg.ID, arg.DeletedAt)
 	return err
 }
 
-const getCargoOffer = `-- name: GetCargoOffer :one
-SELECT id, created_by, origin_country_id, origin_city_id, destination_country_id, destination_city_id, loading_places, unloading_places, ready_to_load_by, delivery_deadline, load_type, truck_type, weight_t, volume_m3, pallets, palletized, temperature_min_c, temperature_max_c, published_at, expires_at, price, currency, notes, status, created_at, updated_at FROM cargo_offers WHERE id = $1 LIMIT 1
+const GetCargoOffer = `-- name: GetCargoOffer :one
+SELECT
+    id,
+    created_by,
+    origin_country_id, origin_city_id,
+    destination_country_id, destination_city_id,
+    loading_places, unloading_places,
+    ready_to_load_by, delivery_deadline,
+    load_type::text   AS load_type,
+    truck_type::text  AS truck_type,
+    weight_t, volume_m3, pallets, palletized,
+    temperature_min_c, temperature_max_c,
+    published_at, expires_at,
+    price, currency, notes,
+    status::text      AS status,
+    created_at, updated_at
+FROM cargo_offers
+WHERE id = $1
+LIMIT 1
 `
 
-func (q *Queries) GetCargoOffer(ctx context.Context, id int32) (CargoOffer, error) {
-	row := q.queryRow(ctx, q.getCargoOfferStmt, getCargoOffer, id)
-	var i CargoOffer
+type GetCargoOfferRow struct {
+	ID                   int32          `json:"id"`
+	CreatedBy            int32          `json:"created_by"`
+	OriginCountryID      int32          `json:"origin_country_id"`
+	OriginCityID         int32          `json:"origin_city_id"`
+	DestinationCountryID int32          `json:"destination_country_id"`
+	DestinationCityID    int32          `json:"destination_city_id"`
+	LoadingPlaces        int32          `json:"loading_places"`
+	UnloadingPlaces      int32          `json:"unloading_places"`
+	ReadyToLoadBy        time.Time      `json:"ready_to_load_by"`
+	DeliveryDeadline     time.Time      `json:"delivery_deadline"`
+	LoadType             string         `json:"load_type"`
+	TruckType            string         `json:"truck_type"`
+	WeightT              string         `json:"weight_t"`
+	VolumeM3             sql.NullString `json:"volume_m3"`
+	Pallets              sql.NullInt32  `json:"pallets"`
+	Palletized           sql.NullBool   `json:"palletized"`
+	TemperatureMinC      sql.NullString `json:"temperature_min_c"`
+	TemperatureMaxC      sql.NullString `json:"temperature_max_c"`
+	PublishedAt          sql.NullTime   `json:"published_at"`
+	ExpiresAt            sql.NullTime   `json:"expires_at"`
+	Price                sql.NullString `json:"price"`
+	Currency             sql.NullString `json:"currency"`
+	Notes                sql.NullString `json:"notes"`
+	Status               string         `json:"status"`
+	CreatedAt            sql.NullTime   `json:"created_at"`
+	UpdatedAt            sql.NullTime   `json:"updated_at"`
+}
+
+func (q *Queries) GetCargoOffer(ctx context.Context, id int32) (GetCargoOfferRow, error) {
+	row := q.queryRow(ctx, q.getCargoOfferStmt, GetCargoOffer, id)
+	var i GetCargoOfferRow
 	err := row.Scan(
 		&i.ID,
 		&i.CreatedBy,
@@ -308,14 +399,14 @@ func (q *Queries) GetCargoOffer(ctx context.Context, id int32) (CargoOffer, erro
 	return i, err
 }
 
-const getCountryByID = `-- name: GetCountryByID :one
+const GetCountryByID = `-- name: GetCountryByID :one
 SELECT id, name, code, alpha3_code, eu_member, continent
 FROM countries
 WHERE id = $1
 `
 
 func (q *Queries) GetCountryByID(ctx context.Context, id int32) (Country, error) {
-	row := q.queryRow(ctx, q.getCountryByIDStmt, getCountryByID, id)
+	row := q.queryRow(ctx, q.getCountryByIDStmt, GetCountryByID, id)
 	var i Country
 	err := row.Scan(
 		&i.ID,
@@ -328,14 +419,14 @@ func (q *Queries) GetCountryByID(ctx context.Context, id int32) (Country, error)
 	return i, err
 }
 
-const getCountryByName = `-- name: GetCountryByName :one
+const GetCountryByName = `-- name: GetCountryByName :one
 SELECT id, name, code, alpha3_code, eu_member, continent
 FROM countries
 WHERE Lower(name) = Lower($1)
 `
 
 func (q *Queries) GetCountryByName(ctx context.Context, lower string) (Country, error) {
-	row := q.queryRow(ctx, q.getCountryByNameStmt, getCountryByName, lower)
+	row := q.queryRow(ctx, q.getCountryByNameStmt, GetCountryByName, lower)
 	var i Country
 	err := row.Scan(
 		&i.ID,
@@ -348,7 +439,7 @@ func (q *Queries) GetCountryByName(ctx context.Context, lower string) (Country, 
 	return i, err
 }
 
-const getEmailVerificationToken = `-- name: GetEmailVerificationToken :one
+const GetEmailVerificationToken = `-- name: GetEmailVerificationToken :one
 SELECT id, user_id, token, created_at, valid_until
 FROM email_verification_tokens
 WHERE token = $1
@@ -356,7 +447,7 @@ LIMIT 1
 `
 
 func (q *Queries) GetEmailVerificationToken(ctx context.Context, token string) (EmailVerificationToken, error) {
-	row := q.queryRow(ctx, q.getEmailVerificationTokenStmt, getEmailVerificationToken, token)
+	row := q.queryRow(ctx, q.getEmailVerificationTokenStmt, GetEmailVerificationToken, token)
 	var i EmailVerificationToken
 	err := row.Scan(
 		&i.ID,
@@ -368,7 +459,7 @@ func (q *Queries) GetEmailVerificationToken(ctx context.Context, token string) (
 	return i, err
 }
 
-const getUser = `-- name: GetUser :one
+const GetUser = `-- name: GetUser :one
 SELECT id, username, email, name, country, city, legal_address, vat_number, status, language, created_at, updated_at
 FROM users
 WHERE id = $1
@@ -391,7 +482,7 @@ type GetUserRow struct {
 }
 
 func (q *Queries) GetUser(ctx context.Context, id int32) (GetUserRow, error) {
-	row := q.queryRow(ctx, q.getUserStmt, getUser, id)
+	row := q.queryRow(ctx, q.getUserStmt, GetUser, id)
 	var i GetUserRow
 	err := row.Scan(
 		&i.ID,
@@ -410,7 +501,7 @@ func (q *Queries) GetUser(ctx context.Context, id int32) (GetUserRow, error) {
 	return i, err
 }
 
-const getUserByUsernameOrEmail = `-- name: GetUserByUsernameOrEmail :one
+const GetUserByUsernameOrEmail = `-- name: GetUserByUsernameOrEmail :one
 SELECT id, username, password, email, name, country, city, legal_address, vat_number, status, language, created_at, updated_at
 FROM users
 WHERE (username = $1 OR email=$1)
@@ -434,7 +525,7 @@ type GetUserByUsernameOrEmailRow struct {
 }
 
 func (q *Queries) GetUserByUsernameOrEmail(ctx context.Context, username string) (GetUserByUsernameOrEmailRow, error) {
-	row := q.queryRow(ctx, q.getUserByUsernameOrEmailStmt, getUserByUsernameOrEmail, username)
+	row := q.queryRow(ctx, q.getUserByUsernameOrEmailStmt, GetUserByUsernameOrEmail, username)
 	var i GetUserByUsernameOrEmailRow
 	err := row.Scan(
 		&i.ID,
@@ -454,7 +545,7 @@ func (q *Queries) GetUserByUsernameOrEmail(ctx context.Context, username string)
 	return i, err
 }
 
-const getUserPassword = `-- name: GetUserPassword :one
+const GetUserPassword = `-- name: GetUserPassword :one
 SELECT password
 FROM users
 WHERE id = $1
@@ -462,13 +553,111 @@ AND status = 'active'
 `
 
 func (q *Queries) GetUserPassword(ctx context.Context, id int32) (string, error) {
-	row := q.queryRow(ctx, q.getUserPasswordStmt, getUserPassword, id)
+	row := q.queryRow(ctx, q.getUserPasswordStmt, GetUserPassword, id)
 	var password string
 	err := row.Scan(&password)
 	return password, err
 }
 
-const listCitiesByCountryID = `-- name: ListCitiesByCountryID :many
+const ListCargoOffers = `-- name: ListCargoOffers :many
+SELECT id, created_by, origin_country_id, origin_city_id, destination_country_id, destination_city_id, loading_places, unloading_places, ready_to_load_by, delivery_deadline, load_type, truck_type, weight_t, volume_m3, pallets, palletized, temperature_min_c, temperature_max_c, published_at, expires_at, price, currency, notes, status, created_at, updated_at
+FROM cargo_offers
+WHERE ($1::int IS NULL OR origin_country_id = $1::int)
+  AND ($2::int IS NULL OR origin_city_id = $2::int)
+  AND ($3::int IS NULL OR destination_country_id = $3::int)
+  AND ($4::int IS NULL OR destination_city_id = $4::int)
+  AND ($5::text IS NULL OR load_type = $5::load_type)
+  AND ($6::text IS NULL OR truck_type = $6::truck_type)
+  AND ($7::text IS NULL OR status = $7::offer_status)
+  AND ($8::timestamptz IS NULL OR ready_to_load_by   >= $8::timestamptz)
+  AND ($9::timestamptz   IS NULL OR ready_to_load_by   <= $9::timestamptz)
+  AND ($10::timestamptz IS NULL OR delivery_deadline >= $10::timestamptz)
+  AND ($11::timestamptz   IS NULL OR delivery_deadline <= $11::timestamptz)
+ORDER BY created_at DESC
+LIMIT $13 OFFSET $12
+`
+
+type ListCargoOffersParams struct {
+	OriginCountryID      sql.NullInt32  `json:"origin_country_id"`
+	OriginCityID         sql.NullInt32  `json:"origin_city_id"`
+	DestinationCountryID sql.NullInt32  `json:"destination_country_id"`
+	DestinationCityID    sql.NullInt32  `json:"destination_city_id"`
+	LoadType             sql.NullString `json:"load_type"`
+	TruckType            sql.NullString `json:"truck_type"`
+	Status               sql.NullString `json:"status"`
+	ReadyFrom            sql.NullTime   `json:"ready_from"`
+	ReadyTo              sql.NullTime   `json:"ready_to"`
+	DeliveryFrom         sql.NullTime   `json:"delivery_from"`
+	DeliveryTo           sql.NullTime   `json:"delivery_to"`
+	Offset               int32          `json:"offset"`
+	Limit                int32          `json:"limit"`
+}
+
+func (q *Queries) ListCargoOffers(ctx context.Context, arg ListCargoOffersParams) ([]CargoOffer, error) {
+	rows, err := q.query(ctx, q.listCargoOffersStmt, ListCargoOffers,
+		arg.OriginCountryID,
+		arg.OriginCityID,
+		arg.DestinationCountryID,
+		arg.DestinationCityID,
+		arg.LoadType,
+		arg.TruckType,
+		arg.Status,
+		arg.ReadyFrom,
+		arg.ReadyTo,
+		arg.DeliveryFrom,
+		arg.DeliveryTo,
+		arg.Offset,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []CargoOffer{}
+	for rows.Next() {
+		var i CargoOffer
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedBy,
+			&i.OriginCountryID,
+			&i.OriginCityID,
+			&i.DestinationCountryID,
+			&i.DestinationCityID,
+			&i.LoadingPlaces,
+			&i.UnloadingPlaces,
+			&i.ReadyToLoadBy,
+			&i.DeliveryDeadline,
+			&i.LoadType,
+			&i.TruckType,
+			&i.WeightT,
+			&i.VolumeM3,
+			&i.Pallets,
+			&i.Palletized,
+			&i.TemperatureMinC,
+			&i.TemperatureMaxC,
+			&i.PublishedAt,
+			&i.ExpiresAt,
+			&i.Price,
+			&i.Currency,
+			&i.Notes,
+			&i.Status,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const ListCitiesByCountryID = `-- name: ListCitiesByCountryID :many
 SELECT id, name, country_id, latitude, longitude
 FROM cities
 WHERE country_id=$1
@@ -476,7 +665,7 @@ ORDER BY name
 `
 
 func (q *Queries) ListCitiesByCountryID(ctx context.Context, countryID int32) ([]City, error) {
-	rows, err := q.query(ctx, q.listCitiesByCountryIDStmt, listCitiesByCountryID, countryID)
+	rows, err := q.query(ctx, q.listCitiesByCountryIDStmt, ListCitiesByCountryID, countryID)
 	if err != nil {
 		return nil, err
 	}
@@ -504,14 +693,14 @@ func (q *Queries) ListCitiesByCountryID(ctx context.Context, countryID int32) ([
 	return items, nil
 }
 
-const listCountries = `-- name: ListCountries :many
+const ListCountries = `-- name: ListCountries :many
 SELECT id, name, code, alpha3_code, eu_member, continent
 FROM countries
 ORDER BY id
 `
 
 func (q *Queries) ListCountries(ctx context.Context) ([]Country, error) {
-	rows, err := q.query(ctx, q.listCountriesStmt, listCountries)
+	rows, err := q.query(ctx, q.listCountriesStmt, ListCountries)
 	if err != nil {
 		return nil, err
 	}
@@ -540,7 +729,7 @@ func (q *Queries) ListCountries(ctx context.Context) ([]Country, error) {
 	return items, nil
 }
 
-const listUsers = `-- name: ListUsers :many
+const ListUsers = `-- name: ListUsers :many
 SELECT id, username, email, name, country, city, legal_address, vat_number, status, language, created_at, updated_at
 FROM users
 WHERE status = 'active'
@@ -563,7 +752,7 @@ type ListUsersRow struct {
 }
 
 func (q *Queries) ListUsers(ctx context.Context) ([]ListUsersRow, error) {
-	rows, err := q.query(ctx, q.listUsersStmt, listUsers)
+	rows, err := q.query(ctx, q.listUsersStmt, ListUsers)
 	if err != nil {
 		return nil, err
 	}
@@ -598,7 +787,7 @@ func (q *Queries) ListUsers(ctx context.Context) ([]ListUsersRow, error) {
 	return items, nil
 }
 
-const updateUserProfile = `-- name: UpdateUserProfile :one
+const UpdateUserProfile = `-- name: UpdateUserProfile :one
 UPDATE users
 SET
   username      = COALESCE($1, username),
@@ -644,7 +833,7 @@ type UpdateUserProfileRow struct {
 }
 
 func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) (UpdateUserProfileRow, error) {
-	row := q.queryRow(ctx, q.updateUserProfileStmt, updateUserProfile,
+	row := q.queryRow(ctx, q.updateUserProfileStmt, UpdateUserProfile,
 		arg.Username,
 		arg.Email,
 		arg.Name,
@@ -674,7 +863,7 @@ func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfilePa
 	return i, err
 }
 
-const updateUserStatus = `-- name: UpdateUserStatus :exec
+const UpdateUserStatus = `-- name: UpdateUserStatus :exec
 UPDATE users
 SET status = $2, updated_at = now()
 WHERE id = $1
@@ -686,6 +875,6 @@ type UpdateUserStatusParams struct {
 }
 
 func (q *Queries) UpdateUserStatus(ctx context.Context, arg UpdateUserStatusParams) error {
-	_, err := q.exec(ctx, q.updateUserStatusStmt, updateUserStatus, arg.ID, arg.Status)
+	_, err := q.exec(ctx, q.updateUserStatusStmt, UpdateUserStatus, arg.ID, arg.Status)
 	return err
 }

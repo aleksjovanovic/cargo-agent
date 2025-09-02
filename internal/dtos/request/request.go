@@ -69,3 +69,24 @@ type CreateCargoOfferRequest struct {
 
 	Notes *string `json:"notes,omitempty"`
 }
+
+type ListCargoOffersQuery struct {
+	OriginCountryID      *int32 `json:"origin_country_id"`
+	OriginCityID         *int32 `json:"origin_city_id"`
+	DestinationCountryID *int32 `json:"destination_country_id"`
+	DestinationCityID    *int32 `json:"destination_city_id"`
+
+	LoadType  *string `json:"load_type"`  // ftl | ltl
+	TruckType *string `json:"truck_type"` // refrigerator | curtain | ...
+	Status    *string `json:"status"`     // published | draft | closed...
+
+	// RFC3339 stringovi, npr "2025-09-10T00:00:00Z"
+	ReadyFrom    *string `json:"ready_from"`
+	ReadyTo      *string `json:"ready_to"`
+	DeliveryFrom *string `json:"delivery_from"`
+	DeliveryTo   *string `json:"delivery_to"`
+
+	// paginacija
+	Page  *int32 `json:"page"`  // 1..N
+	Limit *int32 `json:"limit"` // default 20, max 100
+}

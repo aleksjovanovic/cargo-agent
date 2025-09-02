@@ -24,61 +24,64 @@ func New(db DBTX) *Queries {
 func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	q := Queries{db: db}
 	var err error
-	if q.changePasswordStmt, err = db.PrepareContext(ctx, changePassword); err != nil {
+	if q.changePasswordStmt, err = db.PrepareContext(ctx, ChangePassword); err != nil {
 		return nil, fmt.Errorf("error preparing query ChangePassword: %w", err)
 	}
-	if q.createCargoOfferStmt, err = db.PrepareContext(ctx, createCargoOffer); err != nil {
+	if q.createCargoOfferStmt, err = db.PrepareContext(ctx, CreateCargoOffer); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateCargoOffer: %w", err)
 	}
-	if q.createEmailVerificationTokenStmt, err = db.PrepareContext(ctx, createEmailVerificationToken); err != nil {
+	if q.createEmailVerificationTokenStmt, err = db.PrepareContext(ctx, CreateEmailVerificationToken); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateEmailVerificationToken: %w", err)
 	}
-	if q.createUserStmt, err = db.PrepareContext(ctx, createUser); err != nil {
+	if q.createUserStmt, err = db.PrepareContext(ctx, CreateUser); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateUser: %w", err)
 	}
-	if q.deleteEmailVerificationTokenStmt, err = db.PrepareContext(ctx, deleteEmailVerificationToken); err != nil {
+	if q.deleteEmailVerificationTokenStmt, err = db.PrepareContext(ctx, DeleteEmailVerificationToken); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteEmailVerificationToken: %w", err)
 	}
-	if q.deleteExpiredEmailVerificationTokensStmt, err = db.PrepareContext(ctx, deleteExpiredEmailVerificationTokens); err != nil {
+	if q.deleteExpiredEmailVerificationTokensStmt, err = db.PrepareContext(ctx, DeleteExpiredEmailVerificationTokens); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteExpiredEmailVerificationTokens: %w", err)
 	}
-	if q.deleteUserStmt, err = db.PrepareContext(ctx, deleteUser); err != nil {
+	if q.deleteUserStmt, err = db.PrepareContext(ctx, DeleteUser); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteUser: %w", err)
 	}
-	if q.getCargoOfferStmt, err = db.PrepareContext(ctx, getCargoOffer); err != nil {
+	if q.getCargoOfferStmt, err = db.PrepareContext(ctx, GetCargoOffer); err != nil {
 		return nil, fmt.Errorf("error preparing query GetCargoOffer: %w", err)
 	}
-	if q.getCountryByIDStmt, err = db.PrepareContext(ctx, getCountryByID); err != nil {
+	if q.getCountryByIDStmt, err = db.PrepareContext(ctx, GetCountryByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetCountryByID: %w", err)
 	}
-	if q.getCountryByNameStmt, err = db.PrepareContext(ctx, getCountryByName); err != nil {
+	if q.getCountryByNameStmt, err = db.PrepareContext(ctx, GetCountryByName); err != nil {
 		return nil, fmt.Errorf("error preparing query GetCountryByName: %w", err)
 	}
-	if q.getEmailVerificationTokenStmt, err = db.PrepareContext(ctx, getEmailVerificationToken); err != nil {
+	if q.getEmailVerificationTokenStmt, err = db.PrepareContext(ctx, GetEmailVerificationToken); err != nil {
 		return nil, fmt.Errorf("error preparing query GetEmailVerificationToken: %w", err)
 	}
-	if q.getUserStmt, err = db.PrepareContext(ctx, getUser); err != nil {
+	if q.getUserStmt, err = db.PrepareContext(ctx, GetUser); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUser: %w", err)
 	}
-	if q.getUserByUsernameOrEmailStmt, err = db.PrepareContext(ctx, getUserByUsernameOrEmail); err != nil {
+	if q.getUserByUsernameOrEmailStmt, err = db.PrepareContext(ctx, GetUserByUsernameOrEmail); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUserByUsernameOrEmail: %w", err)
 	}
-	if q.getUserPasswordStmt, err = db.PrepareContext(ctx, getUserPassword); err != nil {
+	if q.getUserPasswordStmt, err = db.PrepareContext(ctx, GetUserPassword); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUserPassword: %w", err)
 	}
-	if q.listCitiesByCountryIDStmt, err = db.PrepareContext(ctx, listCitiesByCountryID); err != nil {
+	if q.listCargoOffersStmt, err = db.PrepareContext(ctx, ListCargoOffers); err != nil {
+		return nil, fmt.Errorf("error preparing query ListCargoOffers: %w", err)
+	}
+	if q.listCitiesByCountryIDStmt, err = db.PrepareContext(ctx, ListCitiesByCountryID); err != nil {
 		return nil, fmt.Errorf("error preparing query ListCitiesByCountryID: %w", err)
 	}
-	if q.listCountriesStmt, err = db.PrepareContext(ctx, listCountries); err != nil {
+	if q.listCountriesStmt, err = db.PrepareContext(ctx, ListCountries); err != nil {
 		return nil, fmt.Errorf("error preparing query ListCountries: %w", err)
 	}
-	if q.listUsersStmt, err = db.PrepareContext(ctx, listUsers); err != nil {
+	if q.listUsersStmt, err = db.PrepareContext(ctx, ListUsers); err != nil {
 		return nil, fmt.Errorf("error preparing query ListUsers: %w", err)
 	}
-	if q.updateUserProfileStmt, err = db.PrepareContext(ctx, updateUserProfile); err != nil {
+	if q.updateUserProfileStmt, err = db.PrepareContext(ctx, UpdateUserProfile); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateUserProfile: %w", err)
 	}
-	if q.updateUserStatusStmt, err = db.PrepareContext(ctx, updateUserStatus); err != nil {
+	if q.updateUserStatusStmt, err = db.PrepareContext(ctx, UpdateUserStatus); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateUserStatus: %w", err)
 	}
 	return &q, nil
@@ -154,6 +157,11 @@ func (q *Queries) Close() error {
 	if q.getUserPasswordStmt != nil {
 		if cerr := q.getUserPasswordStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getUserPasswordStmt: %w", cerr)
+		}
+	}
+	if q.listCargoOffersStmt != nil {
+		if cerr := q.listCargoOffersStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing listCargoOffersStmt: %w", cerr)
 		}
 	}
 	if q.listCitiesByCountryIDStmt != nil {
@@ -234,6 +242,7 @@ type Queries struct {
 	getUserStmt                              *sql.Stmt
 	getUserByUsernameOrEmailStmt             *sql.Stmt
 	getUserPasswordStmt                      *sql.Stmt
+	listCargoOffersStmt                      *sql.Stmt
 	listCitiesByCountryIDStmt                *sql.Stmt
 	listCountriesStmt                        *sql.Stmt
 	listUsersStmt                            *sql.Stmt
@@ -259,6 +268,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getUserStmt:                              q.getUserStmt,
 		getUserByUsernameOrEmailStmt:             q.getUserByUsernameOrEmailStmt,
 		getUserPasswordStmt:                      q.getUserPasswordStmt,
+		listCargoOffersStmt:                      q.listCargoOffersStmt,
 		listCitiesByCountryIDStmt:                q.listCitiesByCountryIDStmt,
 		listCountriesStmt:                        q.listCountriesStmt,
 		listUsersStmt:                            q.listUsersStmt,

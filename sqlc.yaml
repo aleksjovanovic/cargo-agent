@@ -10,8 +10,27 @@ sql:
         emit_json_tags: true
         emit_prepared_queries: true
         emit_empty_slices: true
+        emit_exported_queries: true    # Queries metode su eksportovane (lakše testiranje/DI)
+        omit_unused_structs: true      # ne generiše tipove koji se ne koriste
         overrides:
           - db_type: "user_status"
             go_type: "github.com/aleksjovanovic/cargo-agent/internal/models.UserStatus"
 
+          - db_type: "public.load_type"
+            go_type: "string"
+          - db_type: "load_type"
+            go_type: "string"
 
+          - db_type: "public.truck_type"
+            go_type: "string"
+          - db_type: "truck_type"
+            go_type: "string"
+
+          - db_type: "public.offer_status"
+            go_type: "string"
+          - db_type: "offer_status"
+            go_type: "string"
+
+          - db_type: "pg_catalog.numeric"
+            go_type:
+              type: "string"
