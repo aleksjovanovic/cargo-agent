@@ -65,9 +65,10 @@ func main() {
 	usersSvc := services.NewUserService(db, queries, rdb, []byte(cfg.JWTSecret), jwtOpt, m)
 	countriesSvc := services.NewCountryService(queries, rdb)
 	cargoSvc := services.NewCargoOfferService(db, queries)
+	truckAvailabilitySvc := services.NewTruckAvailabilityService(db, queries)
 
 	// 6) HTTP handleri (tanki) — jedan “glavni” handler koji sadrži sve servise
-	handler := v1handlers.NewHandlers(usersSvc, countriesSvc, cargoSvc)
+	handler := v1handlers.NewHandlers(usersSvc, countriesSvc, cargoSvc, truckAvailabilitySvc)
 
 	// 7) Rute (v1)
 	mux := http.NewServeMux()

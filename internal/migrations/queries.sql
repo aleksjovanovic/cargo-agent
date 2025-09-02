@@ -178,4 +178,57 @@ WHERE (sqlc.narg('origin_country_id')::int IS NULL OR origin_country_id = sqlc.n
 ORDER BY created_at DESC
 LIMIT sqlc.arg('limit') OFFSET sqlc.arg('offset');
 
+-- name: CreateTruckAvailability :one
+INSERT INTO truck_availability (
+  created_by,
+  start_country_id, start_city_id,
+  end_country_id, end_city_id,
+  available_from, available_to,
+  truck_type, max_weight_t, max_volume_m3,
+  full_load, partial_load,
+  loading_places, unloading_places,
+  published_at, expires_at,
+  poster_name, price_per_km, currency, notes, status
+) VALUES (
+  $1,
+  $2, $3,
+  $4, $5,
+  $6, $7,
+  $8, $9, $10,
+  $11, $12,
+  $13, $14,
+  $15, $16,
+  $17, $18, $19, $20, $21
+)
+RETURNING *;
+
+-- name: GetTruckAvailability :one
+SELECT * FROM truck_availability WHERE id = $1 LIMIT 1;
+
+-- name: ListTruckAvailability :many
+SELECT *
+FROM truck_availability
+WHERE
+  (sqlc.narg('start_country_id')::int IS NULL OR start_country_id = sqlc.narg('start_country_id')::int)
+  AND (sqlc.narg('start_city_id')::int IS NULL OR start_city_id = sqlc.narg('start_city_id')::int)
+  AND (sqlc.narg('end_country_id')::int IS NULL OR end_country_id = sqlc.narg('end_country_id')::int)
+  AND (sqlc.narg('end_city_id')::int IS NULL OR end_city_id = sqlc.narg('end_city_id')::int)
+
+  -- ⬇️ ključna izmena: radimo TEXT poređenje, ne enum kast
+  AND (sqlc.narg('truck_type')::text   IS NULL OR truck_type::text   = sqlc.narg('truck_type')::text)
+  AND (sqlc.narg('status')::text       IS NULL OR status::text       = sqlc.narg('status')::text)
+
+  AND (sqlc.narg('available_from')::timestamptz IS NULL OR available_from >= sqlc.narg('available_from')::timestamptz)
+  AND (sqlc.narg('available_to')::timestamptz   IS NULL OR available_to   <= sqlc.narg('available_to')::timestamptz)
+  AND (sqlc.narg('full_load')::bool    IS NULL OR full_load    = sqlc.narg('full_load')::bool)
+  AND (sqlc.narg('partial_load')::bool IS NULL OR partial_load = sqlc.narg('partial_load')::bool)
+ORDER BY published_at DESC NULLS LAST, id DESC
+LIMIT sqlc.arg('limit') OFFSET sqlc.arg('offset');
+
+-- name: UpdateTruckAvailabilityStatus :one
+UPDATE truck_availability
+SET status = $2, updated_at = now()
+WHERE id = $1
+RETURNING *;
+
 

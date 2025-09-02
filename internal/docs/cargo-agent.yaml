@@ -15,8 +15,7 @@ servers:
 paths:
   /health-check:
     get:
-      tags:
-        - Health
+      tags: [Health]
       summary: Health check
       description: Returns a simple OK message to indicate the server is healthy.
       operationId: getHealthCheck
@@ -34,8 +33,7 @@ paths:
 
   /users/login:
     post:
-      tags:
-        - Auth
+      tags: [Auth]
       summary: Login
       description: Authenticates a user with username and password and returns a JWT token.
       operationId: login
@@ -43,8 +41,7 @@ paths:
         required: true
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/LoginRequest'
+            schema: { $ref: '#/components/schemas/LoginRequest' }
             examples:
               sample:
                 value:
@@ -55,8 +52,7 @@ paths:
           description: Login successful
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/LoginSuccessResponse'
+              schema: { $ref: '#/components/schemas/LoginSuccessResponse' }
               examples:
                 ok:
                   value:
@@ -67,19 +63,16 @@ paths:
           description: Invalid request payload or validation error
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
         '401':
           description: Invalid credentials
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
 
   /users/signup:
     post:
-      tags:
-        - Auth
+      tags: [Auth]
       summary: Sign up
       description: Creates a new user account.
       operationId: signup
@@ -87,8 +80,7 @@ paths:
         required: true
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/CreateUserRequest'
+            schema: { $ref: '#/components/schemas/CreateUserRequest' }
             examples:
               sample:
                 value:
@@ -106,8 +98,7 @@ paths:
           description: User created successfully
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/CreateUserSuccessResponse'
+              schema: { $ref: '#/components/schemas/CreateUserSuccessResponse' }
               examples:
                 created:
                   value:
@@ -129,8 +120,7 @@ paths:
           description: Invalid request payload or validation error
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
               examples:
                 invalid_payload:
                   value:
@@ -146,8 +136,7 @@ paths:
           description: Username or email already exists
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
               examples:
                 username_exists:
                   value:
@@ -163,8 +152,7 @@ paths:
           description: Internal error while creating user
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
               examples:
                 transaction_start_failed:
                   value:
@@ -189,8 +177,7 @@ paths:
 
   /users/verify-email:
     get:
-      tags:
-        - Auth
+      tags: [Auth]
       summary: Verify email
       description: Confirms a user's email using a verification token. This endpoint is public.
       operationId: verifyEmail
@@ -199,15 +186,13 @@ paths:
           in: query
           required: true
           description: Verification token from the email link
-          schema:
-            type: string
+          schema: { type: string }
       responses:
         '200':
           description: Email verified
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/DeleteUserSuccessResponse'
+              schema: { $ref: '#/components/schemas/DeleteUserSuccessResponse' }
               examples:
                 ok:
                   value:
@@ -217,8 +202,7 @@ paths:
           description: Invalid or missing token
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
               examples:
                 invalid_token:
                   value:
@@ -229,8 +213,7 @@ paths:
           description: Token expired (gone)
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
               examples:
                 token_expired:
                   value:
@@ -241,13 +224,11 @@ paths:
           description: Server or database error during verification
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
 
   /users/me:
     get:
-      tags:
-        - User
+      tags: [User]
       summary: Get current user's profile
       description: Returns the authenticated user's profile. Requires a valid JWT token.
       operationId: getUserProfile
@@ -258,53 +239,20 @@ paths:
           description: Profile loaded
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/UserProfileSuccessResponse'
-              examples:
-                sample:
-                  value:
-                    message: success
-                    data:
-                      id: 123
-                      username: demo
-                      email: demo@example.com
-                      name: Demo User
-                      country: RS
-                      city: Nis
-                      legal_address: "Some street 10, 18000 Nis"
-                      vat_number: "RS123456789"
-                      status: active
-                      language: en
-                      created: "2025-08-21T10:15:30Z"
-                      updated: "2025-08-28T09:45:00Z"
+              schema: { $ref: '#/components/schemas/UserProfileSuccessResponse' }
         '401':
           description: Unauthorized (missing or invalid token)
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                unauthorized:
-                  value:
-                    error: unauthorized
-                    message: Please log in to continue
-                    details: null
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
         '404':
           description: User not found
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                not_found:
-                  value:
-                    error: not_found
-                    message: User not found
-                    details: null
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
 
     patch:
-      tags:
-        - User
+      tags: [User]
       summary: Update current user's profile
       description: Partially updates the authenticated user's profile. At least one field must be provided. Requires a valid JWT token.
       operationId: updateUserProfile
@@ -314,121 +262,37 @@ paths:
         required: true
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateUserProfileRequest'
-            examples:
-              sample_partial:
-                value:
-                  name: "New Name"
-                  city: "Novi Sad"
-              sample_full:
-                value:
-                  username: "newusername"
-                  email: "new.email@example.com"
-                  name: "New Name"
-                  country: "RS"
-                  city: "Nis"
-                  legal_address: "Some street 10, 18000 Nis"
-                  vat_number: "RS123456789"
-                  language: "en"
+            schema: { $ref: '#/components/schemas/UpdateUserProfileRequest' }
       responses:
         '201':
           description: User profile updated successfully
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/UserProfileSuccessResponse'
-              examples:
-                ok:
-                  value:
-                    message: User profile updated successfully
-                    data:
-                      id: 123
-                      username: newusername
-                      email: new.email@example.com
-                      name: New Name
-                      country: RS
-                      city: Nis
-                      legal_address: "Some street 10, 18000 Nis"
-                      vat_number: "RS123456789"
-                      status: active
-                      language: en
-                      created: "2025-08-21T10:15:30Z"
-                      updated: "2025-08-29T10:30:00Z"
+              schema: { $ref: '#/components/schemas/UserProfileSuccessResponse' }
         '400':
           description: Invalid payload, validation failed, or no fields to update
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                invalid_payload:
-                  value:
-                    error: invalid_payload
-                    message: Invalid request payload
-                    details: null
-                bad_request:
-                  value:
-                    error: bad_request
-                    message: "username must be between 3 and 150 characters long"
-                    details: null
-                no_changes:
-                  value:
-                    error: no_changes
-                    message: No fields to update.
-                    details: null
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
         '401':
           description: Unauthorized (missing or invalid token)
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                unauthorized:
-                  value:
-                    error: unauthorized
-                    message: Please log in to continue
-                    details: null
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
         '409':
           description: Username or email already exists
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                username_exists:
-                  value:
-                    error: username_exists
-                    message: Username already exists
-                    details: null
-                email_exists:
-                  value:
-                    error: email_exists
-                    message: Email already exists
-                    details: null
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
         '500':
           description: Update failed (database or server error)
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                user_update_failed:
-                  value:
-                    error: user_update_failed
-                    message: Failed to update user profile
-                    details: null
-                transaction_commit_failed:
-                  value:
-                    error: transaction_commit_failed
-                    message: Failed to commit transaction
-                    details: null
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
 
   /users/me/password:
     put:
-      tags:
-        - User
-        - Auth
+      tags: [User, Auth]
       summary: Change current user's password
       description: Requires a valid JWT token and the correct old password.
       operationId: changeMyPassword
@@ -438,81 +302,32 @@ paths:
         required: true
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/ChangePasswordRequest'
-            examples:
-              sample:
-                value:
-                  old_password: "DemoPass123!"
-                  new_password: "NewStrong!234"
+            schema: { $ref: '#/components/schemas/ChangePasswordRequest' }
       responses:
         '200':
           description: Password updated successfully
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/DeleteUserSuccessResponse'
-              examples:
-                ok:
-                  value:
-                    message: Password updated successfully
-                    data: null
+              schema: { $ref: '#/components/schemas/DeleteUserSuccessResponse' }
         '400':
           description: Invalid payload or weak password
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                invalid_payload:
-                  value:
-                    error: invalid_payload
-                    message: Invalid request payload
-                    details: null
-                bad_request:
-                  value:
-                    error: bad_request
-                    message: "new password must be at least 8 characters long"
-                    details: null
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
         '401':
           description: Unauthorized or invalid old password
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                unauthorized:
-                  value:
-                    error: unauthorized
-                    message: Please log in to continue
-                    details: null
-                invalid_old_password:
-                  value:
-                    error: invalid_old_password
-                    message: Old password is incorrect
-                    details: null
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
         '500':
           description: Internal error while changing password
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                password_hash_failed:
-                  value:
-                    error: password_hash_failed
-                    message: Failed to hash new password
-                    details: null
-                pasword_update_failed:
-                  value:
-                    error: pasword_update_failed
-                    message: Failed to change password
-                    details: null
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
 
   /users/{id}:
     delete:
-      tags:
-        - User
+      tags: [User]
       summary: Soft delete user
       description: Marks the user as deleted (soft delete via status) and updates the timestamp.
       operationId: deleteUser
@@ -523,63 +338,33 @@ paths:
           in: path
           required: true
           description: User ID (integer)
-          schema:
-            type: integer
-            format: int32
+          schema: { type: integer, format: int32 }
           example: 42
       responses:
         '200':
           description: User deleted successfully
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/DeleteUserSuccessResponse'
-              examples:
-                ok:
-                  value:
-                    message: User deleted successfully
-                    data: null
+              schema: { $ref: '#/components/schemas/DeleteUserSuccessResponse' }
         '400':
           description: Invalid ID (must be an integer)
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                invalid_id:
-                  value:
-                    error: invalid_id
-                    message: ID must be a valid integer
-                    details: null
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
         '401':
           description: Unauthorized (missing or invalid token)
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                unauthorized:
-                  value:
-                    error: unauthorized
-                    message: Please log in to continue
-                    details: null
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
         '500':
           description: Delete failed (database or server error)
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                delete_user_failed:
-                  value:
-                    error: delete_user_failed
-                    message: Failed to delete user
-                    details: null
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
 
   /countries:
     get:
-      tags:
-        - Country
+      tags: [Country]
       summary: List countries
       description: Returns a list of countries. Requires a valid JWT token.
       operationId: listCountries
@@ -590,54 +375,21 @@ paths:
           description: Countries loaded
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/CountriesListSuccessResponse'
-              examples:
-                from_cache:
-                  value:
-                    message: success (from cache/redis)
-                    data:
-                      - id: 15
-                        name: Germany
-                        code: DE
-                        alpha3_code: DEU
-                        eu_member: true
-                        continent: Europe
-                      - id: 36
-                        name: Serbia
-                        code: RS
-                        alpha3_code: SRB
-                        eu_member: false
-                        continent: Europe
+              schema: { $ref: '#/components/schemas/CountriesListSuccessResponse' }
         '401':
           description: Unauthorized (missing or invalid token)
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                unauthorized:
-                  value:
-                    error: unauthorized
-                    message: Please log in to continue
-                    details: null
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
         '404':
           description: Countries not found
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                not_found:
-                  value:
-                    error: not_found
-                    message: Countries not found
-                    details: null
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
 
   /countries/{id}:
     get:
-      tags:
-        - Country
+      tags: [Country]
       summary: Get country by ID
       description: Returns a single country by its ID. Requires a valid JWT token.
       operationId: getCountryById
@@ -648,79 +400,33 @@ paths:
           in: path
           required: true
           description: Country ID (integer)
-          schema:
-            type: integer
-            format: int32
+          schema: { type: integer, format: int32 }
           example: 1
       responses:
         '200':
           description: Country loaded
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/CountrySuccessResponse'
-              examples:
-                sample:
-                  value:
-                    message: success
-                    data:
-                      id: 36
-                      name: Serbia
-                      code: RS
-                      alpha3_code: SRB
-                      eu_member: false
-                      continent: Europe
-                from_cache:
-                  value:
-                    message: success (from cache/redis)
-                    data:
-                      id: 36
-                      name: Serbia
-                      code: RS
-                      alpha3_code: SRB
-                      eu_member: false
-                      continent: Europe
+              schema: { $ref: '#/components/schemas/CountrySuccessResponse' }
         '400':
           description: Invalid ID (must be an integer)
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                invalid_id:
-                  value:
-                    error: invalid_id
-                    message: ID must be a valid integer
-                    details: null
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
         '401':
           description: Unauthorized (missing or invalid token)
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                unauthorized:
-                  value:
-                    error: unauthorized
-                    message: Please log in to continue
-                    details: null
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
         '404':
           description: Country not found
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                not_found:
-                  value:
-                    error: not_found
-                    message: Country not found
-                    details: null
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
 
   /countries/name/{name}:
     get:
-      tags:
-        - Country
+      tags: [Country]
       summary: Get country by name
       description: Returns a single country by its name. Requires a valid JWT token.
       operationId: getCountryByName
@@ -731,33 +437,19 @@ paths:
           in: path
           required: true
           description: Country name (string)
-          schema:
-            type: string
+          schema: { type: string }
           example: Serbia
       responses:
         '200':
           description: Country loaded
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/CountrySuccessResponse'
-              examples:
-                sample:
-                  value:
-                    message: success
-                    data:
-                      id: 36
-                      name: Serbia
-                      code: RS
-                      alpha3_code: SRB
-                      eu_member: false
-                      continent: Europe
+              schema: { $ref: '#/components/schemas/CountrySuccessResponse' }
         '400':
           description: Invalid name (empty or only whitespace)
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
               examples:
                 invalid_name:
                   value:
@@ -768,32 +460,16 @@ paths:
           description: Unauthorized (missing or invalid token)
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                unauthorized:
-                  value:
-                    error: unauthorized
-                    message: Please log in to continue
-                    details: null
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
         '404':
           description: Country not found
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                not_found:
-                  value:
-                    error: not_found
-                    message: Country not found
-                    details: null
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
 
   /countries/id/{id}/cities:
     get:
-      tags:
-        - Country
-        - City
+      tags: [Country, City]
       summary: List cities by country ID
       description: Returns a list of cities for the given country ID. Requires a valid JWT token.
       operationId: listCitiesByCountryId
@@ -804,67 +480,33 @@ paths:
           in: path
           required: true
           description: Country ID (integer)
-          schema:
-            type: integer
-            format: int32
+          schema: { type: integer, format: int32 }
           example: 1
       responses:
         '200':
           description: Cities loaded
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/CitiesListByCountrySuccessResponse'
-              examples:
-                from_cache:
-                  value:
-                    message: success (from cache/redis)
-                    data:
-                      - id: 36
-                        name: Belgrade
-                        country_id: 36
+              schema: { $ref: '#/components/schemas/CitiesListByCountrySuccessResponse' }
         '400':
           description: Invalid ID (must be an integer)
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                invalid_id:
-                  value:
-                    error: invalid_id
-                    message: ID must be a valid integer
-                    details: null
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
         '401':
           description: Unauthorized (missing or invalid token)
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                unauthorized:
-                  value:
-                    error: unauthorized
-                    message: Please log in to continue
-                    details: null
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
         '404':
           description: Cities not found for the specified ID
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                not_found:
-                  value:
-                    error: not_found
-                    message: Cities not found
-                    details: null
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
 
   /countries/name/{name}/cities:
     get:
-      tags:
-        - Country
-        - City
+      tags: [Country, City]
       summary: List cities by country name
       description: Returns a list of cities for the given country name. Requires a valid JWT token.
       operationId: listCitiesByCountryName
@@ -875,32 +517,21 @@ paths:
           in: path
           required: true
           description: Country name (string)
-          schema:
-            type: string
+          schema: { type: string }
           example: Serbia
       responses:
         '200':
           description: Cities loaded
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/CitiesListByCountrySuccessResponse'
-              examples:
-                from_cache:
-                  value:
-                    message: success
-                    data:
-                      - id: 36
-                        name: Belgrade
-                        country_id: 36
+              schema: { $ref: '#/components/schemas/CitiesListByCountrySuccessResponse' }
         '400':
           description: Invalid name (must be a non-empty string)
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
               examples:
-                invalid_id:
+                invalid_name:
                   value:
                     error: invalid_name
                     message: Country name cannot be empty
@@ -909,26 +540,12 @@ paths:
           description: Unauthorized (missing or invalid token)
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                unauthorized:
-                  value:
-                    error: unauthorized
-                    message: Please log in to continue
-                    details: null
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
         '404':
           description: Cities not found for the specified country name
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                not_found:
-                  value:
-                    error: not_found
-                    message: Cities not found
-                    details: null          
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
 
   /cargo-offers:
     get:
@@ -1012,15 +629,13 @@ paths:
         required: true
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/CreateCargoOfferRequest'
+            schema: { $ref: '#/components/schemas/CreateCargoOfferRequest' }
       responses:
         '201':
           description: Created
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/CargoOfferSuccessResponse'
+              schema: { $ref: '#/components/schemas/CargoOfferSuccessResponse' }
         '400':
           description: Invalid payload / validation error
           content:
@@ -1046,10 +661,188 @@ paths:
           description: OK
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/CargoOfferSuccessResponse'
+              schema: { $ref: '#/components/schemas/CargoOfferSuccessResponse' }
         '400':
           description: Invalid ID
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /truck-availability:
+    get:
+      tags: [TruckAvailability]
+      summary: List truck availability
+      operationId: listTruckAvailability
+      parameters:
+        - in: query
+          name: start_country_id
+          schema: { type: integer, format: int32 }
+        - in: query
+          name: start_city_id
+          schema: { type: integer, format: int32 }
+        - in: query
+          name: end_country_id
+          schema: { type: integer, format: int32 }
+        - in: query
+          name: end_city_id
+          schema: { type: integer, format: int32 }
+        - in: query
+          name: truck_type
+          schema:
+            type: string
+            enum: [refrigerator, curtain, box, flatbed, tanker, container, other]
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [published, draft, closed]
+        - in: query
+          name: full_load
+          schema: { type: boolean }
+        - in: query
+          name: partial_load
+          schema: { type: boolean }
+        - in: query
+          name: available_from
+          schema: { type: string, format: date-time }
+        - in: query
+          name: available_to
+          schema: { type: string, format: date-time }
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: List loaded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string, example: success }
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TruckAvailability'
+        '400':
+          description: Invalid filters
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+    post:
+      tags: [TruckAvailability]
+      summary: Create truck availability
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateTruckAvailabilityRequest' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string, example: Truck availability created }
+                  data: { $ref: '#/components/schemas/TruckAvailability' }
+        '400':
+          description: Invalid payload / validation error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /truck-availability/{id}:
+    get:
+      tags: [TruckAvailability]
+      summary: Get truck availability by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer, format: int32 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string, example: success }
+                  data: { $ref: '#/components/schemas/TruckAvailability' }
+        '400':
+          description: Invalid ID
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /truck-availability/{id}/status:
+    patch:
+      tags: [TruckAvailability]
+      summary: Update truck availability status
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer, format: int32 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [published, draft, closed]
+              required: [status]
+      responses:
+        '200':
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string, example: status updated }
+                  data:
+                    $ref: '#/components/schemas/TruckAvailability'
+        '400':
+          description: Invalid status
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '403':
+          description: Forbidden (not the owner)
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -1073,36 +866,23 @@ components:
         message:
           type: string
           example: Server is OK
-      required:
-        - message
+      required: [message]
 
     LoginRequest:
       type: object
-      required:
-        - username
-        - password
+      required: [username, password]
       properties:
-        username:
-          type: string
-          example: demo
-        password:
-          type: string
-          format: password
-          example: DemoPass123!
+        username: { type: string, example: demo }
+        password: { type: string, format: password, example: DemoPass123! }
 
     LoginSuccessResponse:
       type: object
-      required:
-        - message
-        - data
+      required: [message, data]
       properties:
-        message:
-          type: string
-          example: Login successful
+        message: { type: string, example: Login successful }
         data:
           type: object
-          required:
-            - token
+          required: [token]
           properties:
             token:
               type: string
@@ -1111,284 +891,132 @@ components:
 
     ChangePasswordRequest:
       type: object
-      required:
-        - old_password
-        - new_password
+      required: [old_password, new_password]
       properties:
-        old_password:
-          type: string
-          format: password
-          example: DemoPass123!
-        new_password:
-          type: string
-          format: password
-          example: NewStrong!234
+        old_password: { type: string, format: password, example: DemoPass123! }
+        new_password: { type: string, format: password, example: NewStrong!234 }
 
     CreateUserRequest:
       type: object
-      required:
-        - username
-        - email
-        - password
+      required: [username, email, password]
       properties:
-        username:
-          type: string
-          example: johndoe
-        email:
-          type: string
-          format: email
-          example: john.doe@example.com
-        password:
-          type: string
-          format: password
-          example: StrongPass!23
-        name:
-          type: string
-          example: John Doe
-        country:
-          type: string
-          example: RS
-        city:
-          type: string
-          example: Nis
-        legal_address:
-          type: string
-          example: "Some street 10, 18000 Nis"
-        vat_number:
-          type: string
-          example: "RS123456789"
-        language:
-          type: string
-          example: en
+        username: { type: string, example: johndoe }
+        email: { type: string, format: email, example: john.doe@example.com }
+        password: { type: string, format: password, example: StrongPass!23 }
+        name: { type: string, example: John Doe }
+        country: { type: string, example: RS }
+        city: { type: string, example: Nis }
+        legal_address: { type: string, example: "Some street 10, 18000 Nis" }
+        vat_number: { type: string, example: "RS123456789" }
+        language: { type: string, example: en }
 
     CreateUserSuccessResponse:
       type: object
-      required:
-        - message
-        - data
+      required: [message, data]
       properties:
-        message:
-          type: string
-          example: User created successfully
-        data:
-          $ref: '#/components/schemas/User'
+        message: { type: string, example: User created successfully }
+        data: { $ref: '#/components/schemas/User' }
 
     UpdateUserProfileRequest:
       type: object
       description: At least one field must be provided. Omitted fields are not changed.
       properties:
-        username:
-          type: string
-          example: newusername
-        email:
-          type: string
-          format: email
-          example: new.email@example.com
-        name:
-          type: string
-          example: New Name
-        country:
-          type: string
-          example: RS
-        city:
-          type: string
-          example: Nis
-        legal_address:
-          type: string
-          example: "Some street 10, 18000 Nis"
-        vat_number:
-          type: string
-          example: "RS123456789"
-        language:
-          type: string
-          example: en
+        username: { type: string, example: newusername }
+        email: { type: string, format: email, example: new.email@example.com }
+        name: { type: string, example: New Name }
+        country: { type: string, example: RS }
+        city: { type: string, example: Nis }
+        legal_address: { type: string, example: "Some street 10, 18000 Nis" }
+        vat_number: { type: string, example: "RS123456789" }
+        language: { type: string, example: en }
 
     User:
       type: object
+      required: [id, username, email, status]
       properties:
-        id:
-          type: integer
-          format: int32
-          example: 123
-        username:
-          type: string
-          example: demo
-        email:
-          type: string
-          format: email
-          example: demo@example.com
-        name:
-          type: string
-          example: Demo User
-        country:
-          type: string
-          example: RS
-        city:
-          type: string
-          example: Nis
-        legal_address:
-          type: string
-          example: "Some street 10, 18000 Nis"
-        vat_number:
-          type: string
-          example: "RS123456789"
+        id: { type: integer, format: int32, example: 123 }
+        username: { type: string, example: demo }
+        email: { type: string, format: email, example: demo@example.com }
+        name: { type: string, example: Demo User }
+        country: { type: string, example: RS }
+        city: { type: string, example: Nis }
+        legal_address: { type: string, example: "Some street 10, 18000 Nis" }
+        vat_number: { type: string, example: "RS123456789" }
         status:
           type: string
           description: User status (e.g., active, inactive, suspended, deleted, draft)
           example: active
-        language:
-          type: string
-          example: en
-        created:
-          type: string
-          format: date-time
-          nullable: true
-        updated:
-          type: string
-          format: date-time
-          nullable: true
-      required:
-        - id
-        - username
-        - email
-        - status
+        language: { type: string, example: en }
+        created: { type: string, format: date-time, nullable: true }
+        updated: { type: string, format: date-time, nullable: true }
 
     UserProfileSuccessResponse:
       type: object
-      required:
-        - message
-        - data
+      required: [message, data]
       properties:
-        message:
-          type: string
-          example: success
-        data:
-          $ref: '#/components/schemas/User'
+        message: { type: string, example: success }
+        data: { $ref: '#/components/schemas/User' }
 
     Country:
       type: object
+      required: [id, name, code, alpha3_code]
       properties:
-        id:
-          type: integer
-          format: int32
-          example: 1
-        name:
-          type: string
-          example: Serbia
-        code:
-          type: string
-          example: RS
-        alpha3_code:
-          type: string
-          example: SRB
-        eu_member:
-          type: boolean
-          nullable: true
-          example: false
-        continent:
-          type: string
-          nullable: true
-          example: Europe
-      required:
-        - id
-        - name
-        - code
-        - alpha3_code
+        id: { type: integer, format: int32, example: 1 }
+        name: { type: string, example: Serbia }
+        code: { type: string, example: RS }
+        alpha3_code: { type: string, example: SRB }
+        eu_member: { type: boolean, nullable: true, example: false }
+        continent: { type: string, nullable: true, example: Europe }
 
     CountriesListSuccessResponse:
       type: object
-      required:
-        - message
-        - data
+      required: [message, data]
       properties:
-        message:
-          type: string
-          example: success
+        message: { type: string, example: success }
         data:
           type: array
-          items:
-            $ref: '#/components/schemas/Country'
+          items: { $ref: '#/components/schemas/Country' }
 
     CountrySuccessResponse:
       type: object
-      required:
-        - message
-        - data
+      required: [message, data]
       properties:
-        message:
-          type: string
-          example: success
-        data:
-          $ref: '#/components/schemas/Country'
+        message: { type: string, example: success }
+        data: { $ref: '#/components/schemas/Country' }
 
     City:
       type: object
+      required: [id, name, country_id, latitude, longitude]
       properties:
-        id:
-          type: integer
-          format: int32
-          example: 10
-        name:
-          type: string
-          example: Belgrade
-        country_id:
-          type: integer
-          format: int32
-          example: 1
-        latitude:
-          type: string
-          example: 11.11111
-        longitude:
-          type: string
-          example: 22.22222
-      required:
-        - id
-        - name
-        - country_id
-        - latitude
-        - longitude
+        id: { type: integer, format: int32, example: 10 }
+        name: { type: string, example: Belgrade }
+        country_id: { type: integer, format: int32, example: 1 }
+        latitude: { type: string, example: 11.11111 }
+        longitude: { type: string, example: 22.22222 }
 
     CitiesListByCountrySuccessResponse:
       type: object
-      required:
-        - message
-        - data
+      required: [message, data]
       properties:
-        message:
-          type: string
-          example: success
+        message: { type: string, example: success }
         data:
           type: array
-          items:
-            $ref: '#/components/schemas/City'
+          items: { $ref: '#/components/schemas/City' }
 
     DeleteUserSuccessResponse:
       type: object
-      required:
-        - message
-        - data
+      required: [message, data]
       properties:
-        message:
-          type: string
-          example: User deleted successfully
-        data:
-          nullable: true
-          example: null
+        message: { type: string, example: User deleted successfully }
+        data: { nullable: true, example: null }
 
     ErrorResponse:
       type: object
-      required:
-        - error
-        - message
+      required: [error, message]
       properties:
-        error:
-          type: string
-          example: invalid_payload
-        message:
-          type: string
-          example: Invalid request payload
-        details:
-          nullable: true
+        error: { type: string, example: invalid_payload }
+        message: { type: string, example: Invalid request payload }
+        details: { nullable: true }
 
     CreateCargoOfferRequest:
       type: object
@@ -1429,10 +1057,10 @@ components:
 
     CargoOffer:
       type: object
+      required: [id]
       properties:
         id: { type: integer, format: int32 }
-        # (ostala polja jednaka kolumnama iz tabele)
-      required: [id]
+        # add more fields here if you want the full shape in responses
 
     CargoOfferSuccessResponse:
       type: object
@@ -1440,3 +1068,69 @@ components:
       properties:
         message: { type: string, example: success }
         data: { $ref: '#/components/schemas/CargoOffer' }
+
+    TruckAvailability:
+      type: object
+      properties:
+        id: { type: integer, format: int32 }
+        created_by: { type: integer, format: int32 }
+        start_country_id: { type: integer, format: int32 }
+        start_city_id: { type: integer, format: int32 }
+        end_country_id: { type: integer, format: int32, nullable: true }
+        end_city_id: { type: integer, format: int32, nullable: true }
+        available_from: { type: string, format: date-time }
+        available_to: { type: string, format: date-time }
+        truck_type:
+          type: string
+          enum: [refrigerator, curtain, box, flatbed, tanker, container, other]
+        max_weight_t: { type: number, format: float }
+        max_volume_m3: { type: number, format: float, nullable: true }
+        full_load: { type: boolean }
+        partial_load: { type: boolean }
+        loading_places: { type: integer, format: int32 }
+        unloading_places: { type: integer, format: int32 }
+        published_at: { type: string, format: date-time, nullable: true }
+        expires_at: { type: string, format: date-time, nullable: true }
+        poster_name: { type: string }
+        price_per_km: { type: number, format: float, nullable: true }
+        currency: { type: string, nullable: true }
+        notes: { type: string, nullable: true }
+        status:
+          type: string
+          enum: [published, draft, closed]
+        created_at: { type: string, format: date-time, nullable: true }
+        updated_at: { type: string, format: date-time, nullable: true }
+
+    CreateTruckAvailabilityRequest:
+      type: object
+      required:
+        - start_country_id
+        - start_city_id
+        - available_from
+        - available_to
+        - truck_type
+        - max_weight_t
+        - full_load
+        - partial_load
+        - loading_places
+        - unloading_places
+      properties:
+        start_country_id: { type: integer, format: int32 }
+        start_city_id: { type: integer, format: int32 }
+        end_country_id: { type: integer, format: int32, nullable: true }
+        end_city_id: { type: integer, format: int32, nullable: true }
+        available_from: { type: string, format: date-time }
+        available_to: { type: string, format: date-time }
+        truck_type:
+          type: string
+          enum: [refrigerator, curtain, box, flatbed, tanker, container, other]
+        max_weight_t: { type: number, format: float }
+        max_volume_m3: { type: number, format: float, nullable: true }
+        full_load: { type: boolean }
+        partial_load: { type: boolean }
+        loading_places: { type: integer, format: int32 }
+        unloading_places: { type: integer, format: int32 }
+        expires_at: { type: string, format: date-time, nullable: true }
+        price_per_km: { type: number, format: float, nullable: true }
+        currency: { type: string, nullable: true, example: EUR }
+        notes: { type: string, nullable: true }

@@ -49,3 +49,18 @@ func ToNullInt32(p *int32) sql.NullInt32 {
 	}
 	return sql.NullInt32{Int32: *p, Valid: true}
 }
+
+func ToNullBool(p *bool) sql.NullBool {
+	if p == nil {
+		return sql.NullBool{}
+	}
+	return sql.NullBool{Bool: *p, Valid: true}
+}
+
+func ToLowerPtr(p *string) *string {
+	if p == nil {
+		return nil
+	}
+	s := strings.ToLower(strings.TrimSpace(*p))
+	return &s
+}

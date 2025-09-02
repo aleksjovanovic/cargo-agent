@@ -9,6 +9,23 @@ import (
 	"github.com/aleksjovanovic/cargo-agent/internal/response"
 )
 
+func SetupRoutes(mux *http.ServeMux, handler *handlers.Handler) {
+	SetupHealthCheckRoute(mux, handler)
+	SetupUserRoutes(mux, handler)
+	SetupCountryRoutes(mux, handler)
+	SetupCargoOfferRoutes(mux, handler)
+	SetupYamlRoute(mux, handler)
+	SetupTruckAvailabilityRoutes(mux, handler)
+
+	// optional root
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+	})
+}
+
 // /cargo-agent/v1/docs
 func SetupYamlRoute(mux *http.ServeMux, handler *handlers.Handler) {
 	docsMux := http.NewServeMux()
@@ -92,18 +109,20 @@ func SetupUserRoutes(mux *http.ServeMux, handler *handlers.Handler) {
 	mux.Handle("/cargo-agent/v1/users/", http.StripPrefix("/cargo-agent/v1/users", userMux))
 }
 
-func SetupRoutes(mux *http.ServeMux, handler *handlers.Handler) {
-	SetupHealthCheckRoute(mux, handler)
-	SetupUserRoutes(mux, handler)
-	SetupCountryRoutes(mux, handler)
-	SetupCargoOfferRoutes(mux, handler)
-	SetupYamlRoute(mux, handler)
+func SetupTruckAvailabilityRoutes(mux *http.ServeMux, handler *handlers.Handler) {
+	auth := middlewares.Authz([]byte(os.Getenv("JWT_SECRET_KEY")))
 
-	// optional root
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-	})
+	// LIST (public)
+	mux.Handle("GET /cargo-agent/v1/truck-availability", http.HandlerFunc(handler.TruckAvailabilityList()))
+	mux.Handle("GET /cargo-agent/v1/truck-availability/", http.HandlerFunc(handler.TruckAvailabilityList()))
+
+	// CREATE (protected)
+	mux.Handle("POST /cargo-agent/v1/truck-availability", auth(http.HandlerFunc(handler.TruckAvailabilityCreate())))
+	mux.Handle("POST /cargo-agent/v1/truck-availability/", auth(http.HandlerFunc(handler.TruckAvailabilityCreate())))
+
+	// GET BY ID (public)
+	mux.Handle("GET /cargo-agent/v1/truck-availability/{id}", http.HandlerFunc(handler.TruckAvailabilityGetByID()))
+
+	// UPDATE STATUS (protected)
+	mux.Handle("PATCH /cargo-agent/v1/truck-availability/{id}/status", auth(http.HandlerFunc(handler.UpdateStatus())))
 }

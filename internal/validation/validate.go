@@ -417,3 +417,35 @@ func ValidateCreateCargoOffer(req *request.CreateCargoOfferRequest) error {
 	}
 	return nil
 }
+
+func ValidateCreateTruckAvailability(req *request.CreateTruckAvailabilityRequest) error {
+	var errs []string
+
+	if req.StartCountryID <= 0 || req.StartCityID <= 0 {
+		errs = append(errs, "start country/city must be provided")
+	}
+
+	rt := strings.ToLower(strings.TrimSpace(req.TruckType))
+	switch rt {
+	case "refrigerator", "curtain", "box", "flatbed", "tanker", "container", "other":
+	default:
+		errs = append(errs, "invalid truck_type")
+	}
+
+	if req.MaxWeightT <= 0 {
+		errs = append(errs, "max_weight_t must be > 0")
+	}
+
+	// times
+	if _, err := time.Parse(time.RFC3339, strings.TrimSpace(req.AvailableFrom)); err != nil {
+		errs = append(errs, "available_from must be RFC3339")
+	}
+	if _, err := time.Parse(time.RFC3339, strings.TrimSpace(req.AvailableTo)); err != nil {
+		errs = append(errs, "available_to must be RFC3339")
+	}
+
+	if len(errs) > 0 {
+		return fmt.Errorf(strings.Join(errs, "; "))
+	}
+	return nil
+}

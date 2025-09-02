@@ -29986,3 +29986,52 @@ CREATE INDEX IF NOT EXISTS idx_cargo_offers_origin  ON cargo_offers(origin_count
 CREATE INDEX IF NOT EXISTS idx_cargo_offers_dest    ON cargo_offers(destination_country_id, destination_city_id);
 CREATE INDEX IF NOT EXISTS idx_cargo_offers_status  ON cargo_offers(status);
 CREATE INDEX IF NOT EXISTS idx_cargo_offers_expires ON cargo_offers(expires_at);
+
+-- enum truck_type i offer_status već postoje i koristiš ih kroz cargo_offers
+
+CREATE TABLE IF NOT EXISTS truck_availability (
+    id SERIAL PRIMARY KEY,
+    
+    created_by INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+
+    -- lokacije (odakle je vozilo slobodno → dokle preferira)
+    start_country_id INT NOT NULL REFERENCES countries(id),
+    start_city_id    INT NOT NULL REFERENCES cities(id),
+    end_country_id   INT REFERENCES countries(id),
+    end_city_id      INT REFERENCES cities(id),
+
+    -- prozor dostupnosti
+    available_from TIMESTAMPTZ NOT NULL,
+    available_to   TIMESTAMPTZ NOT NULL,
+
+    -- tip / kapacitet
+    truck_type    truck_type NOT NULL,        -- refrigerator/curtain/...
+    max_weight_t  NUMERIC(10,2) NOT NULL,     -- u tonama
+    max_volume_m3 NUMERIC(10,2),              -- opcionalno m3
+
+    -- način utovara
+    full_load    BOOLEAN NOT NULL DEFAULT false,  -- FTL
+    partial_load BOOLEAN NOT NULL DEFAULT true,   -- LTL (default true)
+
+    loading_places   INT NOT NULL DEFAULT 1,  -- broj lokacija za utovar
+    unloading_places INT NOT NULL DEFAULT 1,  -- broj lokacija za istovar
+
+    -- meta
+    published_at TIMESTAMPTZ DEFAULT now(),
+    expires_at   TIMESTAMPTZ,
+
+    poster_name TEXT NOT NULL,                -- snapshot imena/username-a
+    price_per_km NUMERIC(12,2),
+    currency     CHAR(3) DEFAULT 'EUR',
+
+    notes  TEXT,
+    status offer_status NOT NULL DEFAULT 'published',
+
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_truck_avl_start   ON truck_availability(start_country_id, start_city_id);
+CREATE INDEX IF NOT EXISTS idx_truck_avl_end     ON truck_availability(end_country_id, end_city_id);
+CREATE INDEX IF NOT EXISTS idx_truck_avl_window  ON truck_availability(available_from, available_to);
+CREATE INDEX IF NOT EXISTS idx_truck_avl_status  ON truck_availability(status);
