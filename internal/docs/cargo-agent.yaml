@@ -928,9 +928,81 @@ paths:
                   value:
                     error: not_found
                     message: Cities not found
-                    details: null
+                    details: null          
 
   /cargo-offers:
+    get:
+      tags: [CargoOffers]
+      summary: List cargo offers
+      description: Returns a paginated list of cargo offers with optional filters.
+      operationId: listCargoOffers
+      parameters:
+        - in: query
+          name: origin_country_id
+          schema: { type: integer, format: int32 }
+        - in: query
+          name: origin_city_id
+          schema: { type: integer, format: int32 }
+        - in: query
+          name: destination_country_id
+          schema: { type: integer, format: int32 }
+        - in: query
+          name: destination_city_id
+          schema: { type: integer, format: int32 }
+        - in: query
+          name: load_type
+          schema:
+            type: string
+            enum: [ftl, ltl]
+        - in: query
+          name: truck_type
+          schema:
+            type: string
+            enum: [refrigerator, curtain, box, flatbed, tanker, container, other]
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [published, draft, closed]
+        - in: query
+          name: ready_from
+          description: RFC3339 date-time (lower bound for ready_to_load_by)
+          schema: { type: string, format: date-time }
+        - in: query
+          name: ready_to
+          description: RFC3339 date-time (upper bound for ready_to_load_by)
+          schema: { type: string, format: date-time }
+        - in: query
+          name: delivery_from
+          schema: { type: string, format: date-time }
+        - in: query
+          name: delivery_to
+          schema: { type: string, format: date-time }
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: List loaded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string, example: success }
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CargoOffer'
+        '400':
+          description: Invalid filter values
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
     post:
       tags: [CargoOffers]
       summary: Create a cargo offer
@@ -985,8 +1057,8 @@ paths:
           description: Not found
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/ErrorResponse' }           
-      
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
 components:
   securitySchemes:
     bearerAuth:
