@@ -8,36 +8,22 @@ import (
 	"github.com/aleksjovanovic/cargo-agent/internal/authn"
 	"github.com/aleksjovanovic/cargo-agent/internal/dtos/request"
 	"github.com/aleksjovanovic/cargo-agent/internal/logger"
-	"github.com/aleksjovanovic/cargo-agent/internal/middlewares"
+	"github.com/aleksjovanovic/cargo-agent/internal/middleware"
 	"github.com/aleksjovanovic/cargo-agent/internal/response"
-	"github.com/aleksjovanovic/cargo-agent/internal/utils"
 )
-
-// pomoćni decoder (uniform 400)
-func decodeOr400(w http.ResponseWriter, r *http.Request, dst any) bool {
-	if err := utils.DecodeJSONBody(w, r, dst, 1<<20); err != nil {
-		if je, ok := err.(*utils.JSONError); ok {
-			response.RespondWithError(w, je.Status, "invalid_payload", je.Msg, nil)
-		} else {
-			response.RespondWithError(w, http.StatusBadRequest, "invalid_payload", "Invalid request payload", nil)
-		}
-		return false
-	}
-	return true
-}
 
 // GET /users/profile
 func (h *Handler) UserProfileHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		claims, ok := r.Context().Value(middlewares.UserClaimsKey).(*authn.Claims)
+		claims, ok := r.Context().Value(middleware.UserClaimsKey).(*authn.Claims)
 		if !ok {
 			response.RespondWithError(w, http.StatusUnauthorized, "unauthorized", "Please log in to continue", nil)
 			return
 		}
 
-		data, err := h.Users.Profile(r.Context(), int32(claims.UserID))
-		if err != nil {
-			response.RespondWithError(w, err.Status, err.Code, err.Message, err.Details)
+		data, appErr := h.Users.Profile(r.Context(), int32(claims.UserID))
+		if appErr != nil {
+			response.WriteAppError(w, appErr)
 			return
 		}
 
@@ -51,19 +37,19 @@ func (h *Handler) UserProfileHandler() http.HandlerFunc {
 // PUT /users/me/password
 func (h *Handler) ChangePasswordHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		claims, ok := r.Context().Value(middlewares.UserClaimsKey).(*authn.Claims)
+		claims, ok := r.Context().Value(middleware.UserClaimsKey).(*authn.Claims)
 		if !ok {
 			response.RespondWithError(w, http.StatusUnauthorized, "unauthorized", "Please log in to continue", nil)
 			return
 		}
 
 		var req request.ChangePasswordRequest
-		if !decodeOr400(w, r, &req) {
+		if !h.decodeOr400(w, r, &req) {
 			return
 		}
 
-		if err := h.Users.ChangePassword(r.Context(), int32(claims.UserID), req.OldPassword, req.NewPassword); err != nil {
-			response.RespondWithError(w, err.Status, err.Code, err.Message, err.Details)
+		if appErr := h.Users.ChangePassword(r.Context(), int32(claims.UserID), req.OldPassword, req.NewPassword); appErr != nil {
+			response.WriteAppError(w, appErr)
 			return
 		}
 
@@ -78,13 +64,13 @@ func (h *Handler) ChangePasswordHandler() http.HandlerFunc {
 func (h *Handler) LoginUserHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req request.LoginRequest
-		if !decodeOr400(w, r, &req) {
+		if !h.decodeOr400(w, r, &req) {
 			return
 		}
 
 		token, appErr := h.Users.Login(r.Context(), req)
 		if appErr != nil {
-			response.RespondWithError(w, appErr.Status, appErr.Code, appErr.Message, appErr.Details)
+			response.WriteAppError(w, appErr)
 			return
 		}
 
@@ -95,17 +81,49 @@ func (h *Handler) LoginUserHandler() http.HandlerFunc {
 	}
 }
 
+// POST /users/logout
+func (h *Handler) LogoutUserHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Auth guard (middleware već validira JWT i puni claims)
+		claims, ok := r.Context().Value(middleware.UserClaimsKey).(*authn.Claims)
+		if !ok {
+			response.RespondWithError(w, http.StatusUnauthorized, "unauthorized", "Please log in to continue", nil)
+			return
+		}
+
+		// Izvuci Bearer token iz header-a (konzistentna 400 poruka)
+		authz := strings.TrimSpace(r.Header.Get("Authorization"))
+		parts := strings.SplitN(authz, " ", 2)
+		if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") || strings.TrimSpace(parts[1]) == "" {
+			response.RespondWithError(w, http.StatusBadRequest, "invalid_token", "Authorization: Bearer <token> is required", nil)
+			return
+		}
+		rawToken := strings.TrimSpace(parts[1])
+
+		// Servis: blacklist-uj token do isteka
+		if appErr := h.Users.Logout(r.Context(), int32(claims.UserID), rawToken); appErr != nil {
+			response.WriteAppError(w, appErr)
+			return
+		}
+
+		response.RespondWithSuccess(w, http.StatusOK, response.Envelope{
+			"message": "Logout successful",
+			"data":    nil,
+		})
+	}
+}
+
 // POST /users/signup
 func (h *Handler) CreateUserHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req request.CreateUserRequest
-		if !decodeOr400(w, r, &req) {
+		if !h.decodeOr400(w, r, &req) {
 			return
 		}
 
 		out, appErr := h.Users.Signup(r.Context(), req)
 		if appErr != nil {
-			response.RespondWithError(w, appErr.Status, appErr.Code, appErr.Message, appErr.Details)
+			response.WriteAppError(w, appErr)
 			return
 		}
 
@@ -131,7 +149,7 @@ func (h *Handler) VerifyEmailHandler() http.HandlerFunc {
 		}
 
 		if appErr := h.Users.VerifyEmail(r.Context(), token); appErr != nil {
-			response.RespondWithError(w, appErr.Status, appErr.Code, appErr.Message, appErr.Details)
+			response.WriteAppError(w, appErr)
 			return
 		}
 
@@ -145,20 +163,20 @@ func (h *Handler) VerifyEmailHandler() http.HandlerFunc {
 // PATCH /users/profile
 func (h *Handler) UpdateUserProfileHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		claims, ok := r.Context().Value(middlewares.UserClaimsKey).(*authn.Claims)
+		claims, ok := r.Context().Value(middleware.UserClaimsKey).(*authn.Claims)
 		if !ok {
 			response.RespondWithError(w, http.StatusUnauthorized, "unauthorized", "Please log in to continue", nil)
 			return
 		}
 
 		var req request.UpdateUserProfileRequest
-		if !decodeOr400(w, r, &req) {
+		if !h.decodeOr400(w, r, &req) {
 			return
 		}
 
 		out, appErr := h.Users.UpdateProfile(r.Context(), int32(claims.UserID), req)
 		if appErr != nil {
-			response.RespondWithError(w, appErr.Status, appErr.Code, appErr.Message, appErr.Details)
+			response.WriteAppError(w, appErr)
 			return
 		}
 
@@ -172,20 +190,20 @@ func (h *Handler) UpdateUserProfileHandler() http.HandlerFunc {
 // DELETE /users/{id}
 func (h *Handler) DeleteUserHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if _, ok := r.Context().Value(middlewares.UserClaimsKey).(*authn.Claims); !ok {
+		if _, ok := r.Context().Value(middleware.UserClaimsKey).(*authn.Claims); !ok {
 			response.RespondWithError(w, http.StatusUnauthorized, "unauthorized", "Please log in to continue", nil)
 			return
 		}
 
 		id := r.PathValue("id")
 		userID, err := strconv.ParseInt(id, 10, 32)
-		if err != nil {
+		if err != nil || userID <= 0 {
 			response.RespondWithError(w, http.StatusBadRequest, "invalid_id", "ID must be a valid integer", nil)
 			return
 		}
 
 		if appErr := h.Users.Delete(r.Context(), int32(userID)); appErr != nil {
-			response.RespondWithError(w, appErr.Status, appErr.Code, appErr.Message, appErr.Details)
+			response.WriteAppError(w, appErr)
 			return
 		}
 

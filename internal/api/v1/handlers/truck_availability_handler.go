@@ -7,26 +7,14 @@ import (
 
 	"github.com/aleksjovanovic/cargo-agent/internal/authn"
 	"github.com/aleksjovanovic/cargo-agent/internal/dtos/request"
-	"github.com/aleksjovanovic/cargo-agent/internal/middlewares"
+	"github.com/aleksjovanovic/cargo-agent/internal/middleware"
 	"github.com/aleksjovanovic/cargo-agent/internal/response"
-	"github.com/aleksjovanovic/cargo-agent/internal/utils"
 )
 
-func (h *Handler) decodeOr400(w http.ResponseWriter, r *http.Request, dst any) bool {
-	if err := utils.DecodeJSONBody(w, r, dst, 1<<20); err != nil {
-		if je, ok := err.(*utils.JSONError); ok {
-			response.RespondWithError(w, je.Status, "invalid_payload", je.Msg, nil)
-		} else {
-			response.RespondWithError(w, http.StatusBadRequest, "invalid_payload", "Invalid request payload", nil)
-		}
-		return false
-	}
-	return true
-}
-
+// POST /truck-availability
 func (h *Handler) TruckAvailabilityCreate() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		claims, ok := r.Context().Value(middlewares.UserClaimsKey).(*authn.Claims)
+		claims, ok := r.Context().Value(middleware.UserClaimsKey).(*authn.Claims)
 		if !ok {
 			response.RespondWithError(w, http.StatusUnauthorized, "unauthorized", "Please log in to continue", nil)
 			return
@@ -37,7 +25,7 @@ func (h *Handler) TruckAvailabilityCreate() http.HandlerFunc {
 		}
 		out, appErr := h.TruckAvailability.Create(r.Context(), int32(claims.UserID), req)
 		if appErr != nil {
-			response.RespondWithError(w, appErr.Status, appErr.Code, appErr.Message, appErr.Details)
+			response.WriteAppError(w, appErr)
 			return
 		}
 		response.RespondWithSuccess(w, http.StatusCreated, response.Envelope{
@@ -47,6 +35,7 @@ func (h *Handler) TruckAvailabilityCreate() http.HandlerFunc {
 	}
 }
 
+// GET /truck-availability/{id}
 func (h *Handler) TruckAvailabilityGetByID() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
@@ -57,7 +46,7 @@ func (h *Handler) TruckAvailabilityGetByID() http.HandlerFunc {
 		}
 		out, appErr := h.TruckAvailability.Get(r.Context(), int32(n))
 		if appErr != nil {
-			response.RespondWithError(w, appErr.Status, appErr.Code, appErr.Message, appErr.Details)
+			response.WriteAppError(w, appErr)
 			return
 		}
 		response.RespondWithSuccess(w, http.StatusOK, response.Envelope{
@@ -67,6 +56,7 @@ func (h *Handler) TruckAvailabilityGetByID() http.HandlerFunc {
 	}
 }
 
+// GET /truck-availability
 func (h *Handler) TruckAvailabilityList() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		qp := r.URL.Query()
@@ -93,10 +83,10 @@ func (h *Handler) TruckAvailabilityList() http.HandlerFunc {
 			}
 			return nil
 		}
-
 		getStr := func(k string) *string {
-			if s := qp.Get(k); s != "" {
-				return &s
+			if s := strings.TrimSpace(qp.Get(k)); s != "" {
+				v := s
+				return &v
 			}
 			return nil
 		}
@@ -121,7 +111,7 @@ func (h *Handler) TruckAvailabilityList() http.HandlerFunc {
 
 		out, appErr := h.TruckAvailability.List(r.Context(), q)
 		if appErr != nil {
-			response.RespondWithError(w, appErr.Status, appErr.Code, appErr.Message, appErr.Details)
+			response.WriteAppError(w, appErr)
 			return
 		}
 		response.RespondWithSuccess(w, http.StatusOK, response.Envelope{
@@ -131,9 +121,10 @@ func (h *Handler) TruckAvailabilityList() http.HandlerFunc {
 	}
 }
 
+// PATCH /truck-availability/{id}/status
 func (h *Handler) TruckAvailabilityUpdateStatus() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		claims, ok := r.Context().Value(middlewares.UserClaimsKey).(*authn.Claims)
+		claims, ok := r.Context().Value(middleware.UserClaimsKey).(*authn.Claims)
 		if !ok {
 			response.RespondWithError(w, http.StatusUnauthorized, "unauthorized", "Please log in to continue", nil)
 			return
@@ -154,7 +145,7 @@ func (h *Handler) TruckAvailabilityUpdateStatus() http.HandlerFunc {
 
 		out, appErr := h.TruckAvailability.UpdateStatus(r.Context(), id, int32(claims.UserID), req.Status)
 		if appErr != nil {
-			response.RespondWithError(w, appErr.Status, appErr.Code, appErr.Message, appErr.Details)
+			response.WriteAppError(w, appErr)
 			return
 		}
 

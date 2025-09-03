@@ -1,7 +1,10 @@
 package authn
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
@@ -60,4 +63,33 @@ func ParseJWT(tokenString string, secretKey []byte) (*Claims, error) {
 		return claims, nil
 	}
 	return nil, errors.New("invalid token")
+}
+
+// ParseExpiryUnsafe čita "exp" (Unix seconds) iz JWT bez verifikacije potpisa.
+// Koristi se samo za pomoćne potrebe (npr. TTL za blacklist), ne za sigurnosne odluke.
+func ParseExpiryUnsafe(raw string) (time.Time, bool) {
+	parts := strings.Split(raw, ".")
+	if len(parts) < 2 {
+		return time.Time{}, false
+	}
+	payloadB64 := parts[1]
+
+	b, err := base64.RawURLEncoding.DecodeString(payloadB64) // base64url bez paddinga
+	if err != nil {
+		return time.Time{}, false
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(b, &payload); err != nil {
+		return time.Time{}, false
+	}
+
+	switch v := payload["exp"].(type) {
+	case float64:
+		return time.Unix(int64(v), 0), true
+	case json.Number:
+		if i, err := v.Int64(); err == nil {
+			return time.Unix(i, 0), true
+		}
+	}
+	return time.Time{}, false
 }

@@ -3,14 +3,17 @@ package services
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"database/sql"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/aleksjovanovic/cargo-agent/internal/authn"
@@ -33,6 +36,10 @@ type UserService struct {
 	jwtSecret []byte
 	jwtOpt    authn.Options
 	mailer    mailer.Mailer
+
+	// lazy init mailera (ako nije injektovan), thread-safe
+	mailerOnce sync.Once
+	mailerErr  error
 }
 
 func NewUserService(db *sql.DB, q *store.Queries, rdb *redis.Client, jwtSecret []byte, jwtOpt authn.Options, m mailer.Mailer) *UserService {
@@ -123,7 +130,13 @@ func (s *UserService) Login(ctx context.Context, req request.LoginRequest) (stri
 	}
 
 	user, err := s.q.GetUserByUsernameOrEmail(ctx, req.Username)
-	if err != nil || !utils.ComparePassword(user.Password, req.Password) {
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", &response.AppError{Code: "invalid_credentials", Message: "Invalid credentials", Status: 401}
+		}
+		return "", &response.AppError{Code: "db_error", Message: "Failed to load user", Status: 500, Details: err.Error()}
+	}
+	if !utils.ComparePassword(user.Password, req.Password) {
 		return "", &response.AppError{Code: "invalid_credentials", Message: "Invalid credentials", Status: 401}
 	}
 
@@ -132,6 +145,43 @@ func (s *UserService) Login(ctx context.Context, req request.LoginRequest) (stri
 		return "", &response.AppError{Code: "token_generation_error", Message: "Error generating a token", Status: 500}
 	}
 	return token, nil
+}
+
+// Logout: revokuje (blacklist) trenutno korišćen JWT token do njegovog isteka.
+// Radi sa Authorization: Bearer <token> headerom koji je middleware već validirao.
+func (s *UserService) Logout(ctx context.Context, userID int32, rawToken string) *response.AppError {
+	rawToken = strings.TrimSpace(rawToken)
+	if rawToken == "" {
+		return &response.AppError{Code: "invalid_token", Message: "Bearer token is required", Status: 400}
+	}
+
+	// Izračunaj TTL prema "exp" claim-u; fallback na JWT_TTL iz ENV-a ili 24h
+	ttl := 24 * time.Hour
+	if exp, ok := authn.ParseExpiryUnsafe(rawToken); ok {
+		if d := time.Until(exp); d > 0 {
+			ttl = d
+		} else {
+			// Ako je već istekao, nema šta da blacklist-ujemo, ali vratimo 200 UX radi idempotentnosti?
+			// Ovde ćemo samo vratiti 200 kasnije; ništa ne radimo u Redis-u.
+			return nil
+		}
+	} else {
+		if v := strings.TrimSpace(os.Getenv("JWT_TTL")); v != "" {
+			if d, err := time.ParseDuration(v); err == nil {
+				ttl = d
+			}
+		}
+	}
+
+	// Koristi sha256 tokena da ključ ne bude ogroman
+	sum := sha256.Sum256([]byte(rawToken))
+	key := "jwt:blacklist:" + hex.EncodeToString(sum[:])
+
+	// Kao vrednost upiši korisnički ID zbog lakše forenzike
+	if err := s.rdb.Set(ctx, key, fmt.Sprintf("%d", userID), ttl).Err(); err != nil {
+		return &response.AppError{Code: "logout_failed", Message: "Failed to revoke token", Status: 500, Details: err.Error()}
+	}
+	return nil
 }
 
 func (s *UserService) Signup(ctx context.Context, req request.CreateUserRequest) (map[string]any, *response.AppError) {
@@ -293,7 +343,7 @@ func (s *UserService) SendVerificationEmail(ctx context.Context, user map[string
 		return errors.New("user email missing")
 	}
 
-	// 2) Generiši kratak, kriptografski jak token (base64url bez paddinga)
+	// 2) Generiši token
 	token, err := generateVerificationToken(32) // 32B -> ~43-44 base64url karaktera
 	if err != nil {
 		return fmt.Errorf("token generate failed: %w", err)
@@ -317,25 +367,31 @@ func (s *UserService) SendVerificationEmail(ctx context.Context, user map[string
 		return fmt.Errorf("create email verification token failed: %w", err)
 	}
 
-	// 5) Napravi verifikacioni link (prefer front bazu iz ENV-a; fallback je API ruta)
+	// 5) Napravi verifikacioni link
 	base := strings.TrimSuffix(strings.TrimSpace(os.Getenv("EMAIL_VERIFY_BASE")), "/")
 	if base == "" {
 		base = "http://localhost:8081/cargo-agent/v1/users/verify-email"
 	}
 	link := fmt.Sprintf("%s?token=%s", base, token)
 
-	// 6) Renderuj HTML/TXT templejte i pošalji e-mail
-	//    (Pretpostavka: templates.MustInit() je pozvan u main() pri startu.)
+	// 6) Renderuj templejte
 	subject, htmlBody, textBody, err := templates.RenderVerificationEmail(username, link, validUntil)
 	if err != nil {
 		return fmt.Errorf("render verification email failed: %w", err)
 	}
 
-	m, err := mailer.NewFromEnv()
-	if err != nil {
-		return fmt.Errorf("mailer init failed: %w", err)
+	// 7) Mailer lazy-init fallback (thread-safe)
+	s.mailerOnce.Do(func() {
+		if s.mailer == nil {
+			s.mailer, s.mailerErr = mailer.NewFromEnv()
+		}
+	})
+	if s.mailer == nil {
+		return fmt.Errorf("mailer init failed: %w", s.mailerErr)
 	}
-	if err := m.Send(email, subject, htmlBody, textBody); err != nil {
+
+	// 8) Slanje
+	if err := s.mailer.Send(email, subject, htmlBody, textBody); err != nil {
 		return fmt.Errorf("send verification email failed: %w", err)
 	}
 
@@ -365,25 +421,22 @@ func (s *UserService) VerifyEmail(ctx context.Context, token string) *response.A
 		return &response.AppError{Code: "token_expired", Message: "Token has expired", Status: 410}
 	}
 
-	// 3) Aktiviraj korisnika (iz draft → active; može i bez obzira na prethodni status)
+	// 3) Aktiviraj korisnika
 	now := time.Now()
 	err = s.q.UpdateUserStatus(ctx, store.UpdateUserStatusParams{
 		ID:     int32(row.UserID),
 		Status: models.UserStatusActive,
-		// updated_at se setuje u SQL-u na now(), ali ako ti treba dodatno:
-		// ovde ništa – query već radi SET updated_at = now()
 	})
 	if err != nil {
 		return &response.AppError{Code: "user_update_failed", Message: "Failed to activate user", Status: 500}
 	}
 
-	// 4) Očisti token (više nije potreban)
+	// 4) Očisti token
 	if err := s.q.DeleteEmailVerificationToken(ctx, token); err != nil {
-		// ne blokiramo uspeh – samo loguj
 		logger.Warn("failed to delete verification token", "error", err)
 	}
 
-	// 5) Po želji: očisti user cache
+	// 5) Očisti user cache
 	_ = s.rdb.Del(ctx, cacheKeyUser(int32(row.UserID))).Err()
 
 	logger.Info("user verified by email", "user_id", row.UserID, "at", now.Format(time.RFC3339))

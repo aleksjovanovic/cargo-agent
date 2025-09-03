@@ -70,6 +70,58 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
 
+  /users/logout:
+    post:
+      tags: [Auth]
+      summary: Logout
+      description: Revokes (blacklists) the current JWT until its expiry. Requires a valid Bearer token.
+      operationId: logout
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DeleteUserSuccessResponse' }
+              examples:
+                ok:
+                  value:
+                    message: Logout successful
+                    data: null
+        '400':
+          description: Invalid/malformed Authorization header
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                invalid_auth_header:
+                  value:
+                    error: invalid_auth_header
+                    message: Invalid Authorization header
+                    details: null
+        '401':
+          description: Unauthorized (expired/revoked/invalid token)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                token_revoked:
+                  value:
+                    error: token_revoked
+                    message: Token has been revoked
+                    details: null
+                token_expired:
+                  value:
+                    error: token_expired
+                    message: Token has expired
+                    details: null
+        '500':
+          description: Server error while revoking token
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
   /users/signup:
     post:
       tags: [Auth]
@@ -264,7 +316,7 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/UpdateUserProfileRequest' }
       responses:
-        '201':
+        '200':
           description: User profile updated successfully
           content:
             application/json:
@@ -580,7 +632,7 @@ paths:
           name: status
           schema:
             type: string
-            enum: [published, draft, closed]
+            enum: [published, draft, cancelled, expired, closed]
         - in: query
           name: ready_from
           description: RFC3339 date-time (lower bound for ready_to_load_by)
@@ -694,7 +746,7 @@ paths:
               properties:
                 status:
                   type: string
-                  enum: [draft, published, cancelled, expired, closed]   # uskladi sa DB enumom!
+                  enum: [draft, published, cancelled, expired, closed]
       responses:
         '200':
           description: Status updated
@@ -745,7 +797,7 @@ paths:
           name: status
           schema:
             type: string
-            enum: [published, draft, closed]
+            enum: [published, draft, cancelled, expired, closed]
         - in: query
           name: full_load
           schema: { type: boolean }
@@ -875,7 +927,7 @@ paths:
                 properties:
                   message: { type: string, example: status updated }
                   data:
-                    $ref: '#/components/schemas/CargoOffer'
+                    $ref: '#/components/schemas/TruckAvailability'
         '400':
           description: Invalid status
           content:
@@ -1052,7 +1104,7 @@ components:
       type: object
       required: [message, data]
       properties:
-        message: { type: string, example: User deleted successfully }
+        message: { type: string, example: "Operation successful" }
         data: { nullable: true, example: null }
 
     ErrorResponse:
@@ -1105,7 +1157,6 @@ components:
       required: [id]
       properties:
         id: { type: integer, format: int32 }
-        # add more fields here if you want the full shape in responses
 
     CargoOfferSuccessResponse:
       type: object
@@ -1142,7 +1193,7 @@ components:
         notes: { type: string, nullable: true }
         status:
           type: string
-          enum: [published, draft, closed]
+          enum: [published, draft, cancelled, expired, closed]
         created_at: { type: string, format: date-time, nullable: true }
         updated_at: { type: string, format: date-time, nullable: true }
 

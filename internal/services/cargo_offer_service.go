@@ -62,7 +62,7 @@ func (s *CargoOfferService) Create(
 		}
 	}
 
-	// 3) Parametri za insert (tipovi u skladu sa sqlc generisanim modelom)
+	// 3) Parametri za insert
 	params := store.CreateCargoOfferParams{
 		CreatedBy:            userID,
 		OriginCountryID:      req.OriginCountryID,
@@ -79,7 +79,6 @@ func (s *CargoOfferService) Create(
 		LoadType:  strings.ToLower(req.LoadType),  // "ftl"/"ltl"
 		TruckType: strings.ToLower(req.TruckType), // "refrigerator"/"curtain"/...
 
-		// NUMERIC → string ili NullString (u skladu s sqlc mapiranjem)
 		WeightT:         utils.ToNumericString(req.WeightT),
 		VolumeM3:        utils.ToNullNumericString(req.VolumeM3),
 		Pallets:         utils.ToNullInt32(req.Pallets),
@@ -91,8 +90,8 @@ func (s *CargoOfferService) Create(
 		ExpiresAt:   utils.SqlNullTimePtr(expAt),
 
 		Price:    utils.ToNullNumericString(req.Price),
-		Currency: utils.ToNullString(req.Currency), // ✅ koristi postojeći helper
-		Notes:    utils.ToNullString(req.Notes),    // ✅ koristi postojeći helper
+		Currency: utils.ToNullString(req.Currency),
+		Notes:    utils.ToNullString(req.Notes),
 
 		Status: "published",
 	}
@@ -105,7 +104,7 @@ func (s *CargoOfferService) Create(
 		}
 	}
 
-	// 5) Odgovor kao map (stabilan JSON)
+	// 5) Odgovor
 	raw, _ := json.Marshal(row)
 	var out map[string]any
 	_ = json.Unmarshal(raw, &out)
@@ -174,9 +173,9 @@ func (s *CargoOfferService) List(ctx context.Context, q request.ListCargoOffersQ
 		OriginCityID:         utils.ToNullInt32(q.OriginCityID),
 		DestinationCountryID: utils.ToNullInt32(q.DestinationCountryID),
 		DestinationCityID:    utils.ToNullInt32(q.DestinationCityID),
-		LoadType:             utils.ToLowerNullString(q.LoadType),  // string → enum u SQL-u (cast)
-		TruckType:            utils.ToLowerNullString(q.TruckType), // string → enum u SQL-u (cast)
-		Status:               utils.ToLowerNullString(q.Status),    // string → enum u SQL-u (cast)
+		LoadType:             utils.ToLowerNullString(q.LoadType),
+		TruckType:            utils.ToLowerNullString(q.TruckType),
+		Status:               utils.ToLowerNullString(q.Status),
 		ReadyFrom:            utils.SqlNullTimePtr(readyFrom),
 		ReadyTo:              utils.SqlNullTimePtr(readyTo),
 		DeliveryFrom:         utils.SqlNullTimePtr(deliveryFrom),
@@ -188,7 +187,6 @@ func (s *CargoOfferService) List(ctx context.Context, q request.ListCargoOffersQ
 		return nil, &response.AppError{Code: "list_failed", Message: "Failed to list cargo offers", Status: 500}
 	}
 
-	// marshal → unmarshal da dobijemo []map[string]any (isti izlaz kao create/get)
 	raw, _ := json.Marshal(rows)
 	var out []map[string]any
 	_ = json.Unmarshal(raw, &out)
@@ -207,10 +205,13 @@ func (s *CargoOfferService) UpdateStatus(ctx context.Context, id int32, userID i
 		}
 	}
 
-	// 1) Provera vlasništva (da ne možemo menjati tuđ oglas)
+	// 1) Provera vlasništva
 	row, err := s.q.GetCargoOffer(ctx, id)
 	if err != nil {
-		return nil, &response.AppError{Code: "not_found", Message: "Truck availability not found", Status: 404}
+		if err == sql.ErrNoRows {
+			return nil, &response.AppError{Code: "not_found", Message: "cargo offer not found", Status: 404}
+		}
+		return nil, &response.AppError{Code: "db_error", Message: "failed to load cargo offer", Status: 500, Details: err.Error()}
 	}
 	if row.CreatedBy != userID {
 		return nil, &response.AppError{Code: "forbidden", Message: "You cannot modify this resource", Status: 403}

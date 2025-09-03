@@ -7,32 +7,27 @@ import (
 
 	"github.com/aleksjovanovic/cargo-agent/internal/authn"
 	"github.com/aleksjovanovic/cargo-agent/internal/dtos/request"
-	"github.com/aleksjovanovic/cargo-agent/internal/middlewares"
+	"github.com/aleksjovanovic/cargo-agent/internal/middleware"
 	"github.com/aleksjovanovic/cargo-agent/internal/response"
-	"github.com/aleksjovanovic/cargo-agent/internal/utils"
 )
 
+// POST /cargo-offers
 func (h *Handler) Create() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		claims, ok := r.Context().Value(middlewares.UserClaimsKey).(*authn.Claims)
+		claims, ok := r.Context().Value(middleware.UserClaimsKey).(*authn.Claims)
 		if !ok {
 			response.RespondWithError(w, http.StatusUnauthorized, "unauthorized", "Please log in to continue", nil)
 			return
 		}
 
 		var req request.CreateCargoOfferRequest
-		if err := utils.DecodeJSONBody(w, r, &req, 1<<20); err != nil {
-			if je, ok := err.(*utils.JSONError); ok {
-				response.RespondWithError(w, je.Status, "invalid_payload", je.Msg, nil)
-			} else {
-				response.RespondWithError(w, http.StatusBadRequest, "invalid_payload", "Invalid request payload", nil)
-			}
+		if !h.decodeOr400(w, r, &req) {
 			return
 		}
 
 		out, appErr := h.CargoOffer.Create(r.Context(), int32(claims.UserID), req)
 		if appErr != nil {
-			response.RespondWithError(w, appErr.Status, appErr.Code, appErr.Message, appErr.Details)
+			response.WriteAppError(w, appErr)
 			return
 		}
 
@@ -43,6 +38,7 @@ func (h *Handler) Create() http.HandlerFunc {
 	}
 }
 
+// GET /cargo-offers/{id}
 func (h *Handler) GetByID() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		idStr := r.PathValue("id")
@@ -54,7 +50,7 @@ func (h *Handler) GetByID() http.HandlerFunc {
 
 		out, appErr := h.CargoOffer.Get(r.Context(), int32(id64))
 		if appErr != nil {
-			response.RespondWithError(w, appErr.Status, appErr.Code, appErr.Message, appErr.Details)
+			response.WriteAppError(w, appErr)
 			return
 		}
 
@@ -71,7 +67,7 @@ func (h *Handler) List() http.HandlerFunc {
 		qv := r.URL.Query()
 
 		i32 := func(s string) *int32 {
-			if s == "" {
+			if strings.TrimSpace(s) == "" {
 				return nil
 			}
 			if n, err := strconv.ParseInt(s, 10, 32); err == nil {
@@ -106,7 +102,7 @@ func (h *Handler) List() http.HandlerFunc {
 
 		data, appErr := h.CargoOffer.List(r.Context(), req)
 		if appErr != nil {
-			response.RespondWithError(w, appErr.Status, appErr.Code, appErr.Message, appErr.Details)
+			response.WriteAppError(w, appErr)
 			return
 		}
 
@@ -117,9 +113,10 @@ func (h *Handler) List() http.HandlerFunc {
 	}
 }
 
+// PATCH /cargo-offers/{id}/status
 func (h *Handler) CargoOfferUpdateStatus() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		claims, ok := r.Context().Value(middlewares.UserClaimsKey).(*authn.Claims)
+		claims, ok := r.Context().Value(middleware.UserClaimsKey).(*authn.Claims)
 		if !ok {
 			response.RespondWithError(w, http.StatusUnauthorized, "unauthorized", "Please log in to continue", nil)
 			return
@@ -140,7 +137,7 @@ func (h *Handler) CargoOfferUpdateStatus() http.HandlerFunc {
 
 		out, appErr := h.CargoOffer.UpdateStatus(r.Context(), id, int32(claims.UserID), req.Status)
 		if appErr != nil {
-			response.RespondWithError(w, appErr.Status, appErr.Code, appErr.Message, appErr.Details)
+			response.WriteAppError(w, appErr)
 			return
 		}
 

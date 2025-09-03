@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"time"
 
@@ -44,11 +45,17 @@ func (s *TruckAvailabilityService) Create(ctx context.Context, userID int32, req
 		}
 	}
 
-	// poster_name snapshot (pokuša name, fallback na username)
-	u, _ := s.q.GetUser(ctx, userID)
-	poster := strings.TrimSpace(u.Name)
-	if poster == "" {
-		poster = u.Username
+	// poster_name snapshot (pokuša name, fallback na username; ako DB padne, koristi "user-<id>")
+	u, uErr := s.q.GetUser(ctx, userID)
+	poster := ""
+	if uErr == nil {
+		poster = strings.TrimSpace(u.Name)
+		if poster == "" {
+			poster = u.Username
+		}
+	}
+	if strings.TrimSpace(poster) == "" {
+		poster = fmt.Sprintf("user-%d", userID)
 	}
 
 	row, err := s.q.CreateTruckAvailability(ctx, store.CreateTruckAvailabilityParams{

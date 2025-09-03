@@ -66,3 +66,23 @@ func DecodeJSONBody(w http.ResponseWriter, r *http.Request, dst any, maxBytes in
 
 	return nil
 }
+
+// DecodeJSONBodyOr400 je tanak wrapper koji omogućava handlerima da elegantno mapiraju greške u HTTP odgovor,
+// bez da utils zna kako izgleda tvoj JSON error format.
+func DecodeJSONBodyOr400(
+	w http.ResponseWriter,
+	r *http.Request,
+	dst any,
+	maxBytes int64,
+	onError func(status int, msg string),
+) bool {
+	if err := DecodeJSONBody(w, r, dst, maxBytes); err != nil {
+		if je, ok := err.(*JSONError); ok {
+			onError(je.Status, je.Msg)
+		} else {
+			onError(http.StatusBadRequest, "Invalid request payload")
+		}
+		return false
+	}
+	return true
+}

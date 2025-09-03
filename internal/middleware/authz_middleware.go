@@ -1,7 +1,9 @@
-package middlewares
+package middleware
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"net/http"
 	"strings"
@@ -9,6 +11,7 @@ import (
 	"github.com/aleksjovanovic/cargo-agent/internal/authn"
 	"github.com/aleksjovanovic/cargo-agent/internal/response"
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/redis/go-redis/v9"
 )
 
 type contextKey string
@@ -27,7 +30,18 @@ func bearerToken(r *http.Request) (string, error) {
 	return parts[1], nil
 }
 
+// Authz: kompatibilno sa postojećim kodom (bez Redis blackliste).
 func Authz(secret []byte) func(http.Handler) http.Handler {
+	return authz(secret, nil)
+}
+
+// AuthzWithBlacklist: kao Authz, ali dodatno proverava Redis blacklist
+// ("jwt:blacklist:<sha256(token)>"). Ako je token revokovan → 401.
+func AuthzWithBlacklist(secret []byte, rdb *redis.Client) func(http.Handler) http.Handler {
+	return authz(secret, rdb)
+}
+
+func authz(secret []byte, rdb *redis.Client) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			tokenStr, err := bearerToken(r)
@@ -43,7 +57,7 @@ func Authz(secret []byte) func(http.Handler) http.Handler {
 			}
 
 			keyFunc := func(token *jwt.Token) (any, error) {
-				// Prihvati isključivo HS256
+				// Samo HS256
 				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok || token.Method.Alg() != jwt.SigningMethodHS256.Alg() {
 					return nil, jwt.ErrTokenUnverifiable
 				}
@@ -57,7 +71,7 @@ func Authz(secret []byte) func(http.Handler) http.Handler {
 				keyFunc,
 				jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}),
 			)
-			if err != nil {
+			if err != nil { // <= ovde je bila suvišna zagrada u staroj verziji
 				var ve *jwt.ValidationError
 				if errors.As(err, &ve) {
 					switch {
@@ -83,6 +97,18 @@ func Authz(secret []byte) func(http.Handler) http.Handler {
 			if !parsed.Valid {
 				response.RespondWithError(w, http.StatusUnauthorized, "invalid_token", "Invalid token", nil)
 				return
+			}
+
+			// (Opcionalno) Redis blacklist check – aktivno samo ako je rdb != nil.
+			if rdb != nil {
+				sum := sha256.Sum256([]byte(tokenStr))
+				key := "jwt:blacklist:" + hex.EncodeToString(sum[:])
+
+				if val, err := rdb.Get(r.Context(), key).Result(); err == nil && val != "" {
+					w.Header().Set("WWW-Authenticate", `Bearer error="invalid_token", error_description="Token revoked"`)
+					response.RespondWithError(w, http.StatusUnauthorized, "token_revoked", "Token has been revoked", nil)
+					return
+				}
 			}
 
 			ctx := context.WithValue(r.Context(), UserClaimsKey, claims)

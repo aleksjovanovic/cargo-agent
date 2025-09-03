@@ -15,7 +15,7 @@ import (
 	"github.com/aleksjovanovic/cargo-agent/internal/config"
 	"github.com/aleksjovanovic/cargo-agent/internal/logger"
 	"github.com/aleksjovanovic/cargo-agent/internal/mailer"
-	"github.com/aleksjovanovic/cargo-agent/internal/middlewares"
+	"github.com/aleksjovanovic/cargo-agent/internal/middleware"
 	"github.com/aleksjovanovic/cargo-agent/internal/services"
 	"github.com/aleksjovanovic/cargo-agent/internal/store"
 	"github.com/aleksjovanovic/cargo-agent/internal/templates"
@@ -72,10 +72,11 @@ func main() {
 
 	// 7) Rute (v1)
 	mux := http.NewServeMux()
-	v1routes.SetupRoutes(mux, handler)
+	// v1routes.SetupRoutes(mux, handler)
+	v1routes.SetupRoutes(mux, handler, rdb) //ako radimo bez Redisa, umesto rdb prosledjujemo nil
 
 	// 8) Global middleware chain
-	root := middlewares.RequestID(middlewares.Recoverer(mux))
+	root := middleware.RequestID(middleware.Recoverer(mux))
 
 	// 9) HTTP server sa timeout-ima
 	serverAddr := fmt.Sprintf(":%s", cfg.ServerPort)

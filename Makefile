@@ -15,6 +15,10 @@ fmt:
 	@echo "Formatting code"
 	@go fmt ./...
 
+lint:
+	@echo "Golangci-lin run"
+	@golangci-lint run ./...
+
 build:
 	@echo "Building app"
 	@mkdir -p $(BUILD_DIR)
