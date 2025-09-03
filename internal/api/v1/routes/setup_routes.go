@@ -85,6 +85,10 @@ func SetupCargoOfferRoutes(mux *http.ServeMux, handler *handlers.Handler) {
 
 	// GET BY ID (public)
 	mux.Handle("GET /cargo-agent/v1/cargo-offers/{id}", http.HandlerFunc(handler.GetByID()))
+
+	// UPDATE STATUS (protected)
+	mux.Handle("PATCH /cargo-agent/v1/cargo-offers/{id}/status", auth(http.HandlerFunc(handler.CargoOfferUpdateStatus())))
+	mux.Handle("PATCH /cargo-agent/v1/cargo-offers/{id}/status/", auth(http.HandlerFunc(handler.CargoOfferUpdateStatus())))
 }
 
 // /cargo-agent/v1/users/*
@@ -124,5 +128,5 @@ func SetupTruckAvailabilityRoutes(mux *http.ServeMux, handler *handlers.Handler)
 	mux.Handle("GET /cargo-agent/v1/truck-availability/{id}", http.HandlerFunc(handler.TruckAvailabilityGetByID()))
 
 	// UPDATE STATUS (protected)
-	mux.Handle("PATCH /cargo-agent/v1/truck-availability/{id}/status", auth(http.HandlerFunc(handler.UpdateStatus())))
+	mux.Handle("PATCH /cargo-agent/v1/truck-availability/{id}/status", auth(http.HandlerFunc(handler.TruckAvailabilityUpdateStatus())))
 }

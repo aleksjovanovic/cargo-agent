@@ -91,6 +91,11 @@ type ListCargoOffersQuery struct {
 	Limit *int32 `json:"limit"` // default 20, max 100
 }
 
+// Update status (published | draft | closed)
+type UpdateCargoOfferStatusRequest struct {
+	Status string `json:"status"`
+}
+
 type CreateTruckAvailabilityRequest struct {
 	StartCountryID int32  `json:"start_country_id"`
 	StartCityID    int32  `json:"start_city_id"`

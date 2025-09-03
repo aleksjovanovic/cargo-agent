@@ -116,3 +116,37 @@ func (h *Handler) List() http.HandlerFunc {
 		})
 	}
 }
+
+func (h *Handler) CargoOfferUpdateStatus() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		claims, ok := r.Context().Value(middlewares.UserClaimsKey).(*authn.Claims)
+		if !ok {
+			response.RespondWithError(w, http.StatusUnauthorized, "unauthorized", "Please log in to continue", nil)
+			return
+		}
+
+		idStr := r.PathValue("id")
+		id64, err := strconv.ParseInt(idStr, 10, 32)
+		if err != nil || id64 <= 0 {
+			response.RespondWithError(w, http.StatusBadRequest, "invalid_id", "ID must be a valid integer", nil)
+			return
+		}
+		id := int32(id64)
+
+		var req request.UpdateCargoOfferStatusRequest
+		if !h.decodeOr400(w, r, &req) {
+			return
+		}
+
+		out, appErr := h.CargoOffer.UpdateStatus(r.Context(), id, int32(claims.UserID), req.Status)
+		if appErr != nil {
+			response.RespondWithError(w, appErr.Status, appErr.Code, appErr.Message, appErr.Details)
+			return
+		}
+
+		response.RespondWithSuccess(w, http.StatusOK, response.Envelope{
+			"message": "status updated",
+			"data":    out,
+		})
+	}
+}

@@ -29941,6 +29941,21 @@ BEGIN
 END $$;
 
 
+-- 2025XXXX_add_offer_status_closed.sql () (proveriti d ali treba obzirom da prethodni upit treba da postavi status closed)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_type t
+    JOIN pg_enum e ON t.oid = e.enumtypid
+    WHERE t.typname = 'offer_status'
+      AND e.enumlabel = 'closed'
+  ) THEN
+    ALTER TYPE offer_status ADD VALUE 'closed';
+  END IF;
+END$$;
+
+
 CREATE TABLE IF NOT EXISTS cargo_offers (
     id SERIAL PRIMARY KEY,
 

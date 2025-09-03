@@ -673,6 +673,51 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
 
+  /cargo-offers/{id}/status:
+    patch:
+      tags: [CargoOffers]
+      summary: Update cargo offer status
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer, format: int32 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [draft, published, cancelled, expired, closed]   # uskladi sa DB enumom!
+      responses:
+        '200':
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CargoOfferSuccessResponse'
+        '400':
+          description: Invalid status
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '404':
+          description: Offer not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
   /truck-availability:
     get:
       tags: [TruckAvailability]
@@ -818,7 +863,7 @@ paths:
               properties:
                 status:
                   type: string
-                  enum: [published, draft, closed]
+                  enum: [draft, published, cancelled, expired, closed]
               required: [status]
       responses:
         '200':
@@ -830,7 +875,7 @@ paths:
                 properties:
                   message: { type: string, example: status updated }
                   data:
-                    $ref: '#/components/schemas/TruckAvailability'
+                    $ref: '#/components/schemas/CargoOffer'
         '400':
           description: Invalid status
           content:

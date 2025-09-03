@@ -131,7 +131,7 @@ func (h *Handler) TruckAvailabilityList() http.HandlerFunc {
 	}
 }
 
-func (h *Handler) UpdateStatus() http.HandlerFunc {
+func (h *Handler) TruckAvailabilityUpdateStatus() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		claims, ok := r.Context().Value(middlewares.UserClaimsKey).(*authn.Claims)
 		if !ok {

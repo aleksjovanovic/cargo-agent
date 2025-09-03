@@ -178,6 +178,12 @@ WHERE (sqlc.narg('origin_country_id')::int IS NULL OR origin_country_id = sqlc.n
 ORDER BY created_at DESC
 LIMIT sqlc.arg('limit') OFFSET sqlc.arg('offset');
 
+-- name: UpdateCargoOfferStatus :one
+UPDATE cargo_offers
+SET status = $2, updated_at = now()
+WHERE id = $1
+RETURNING *;
+
 -- name: CreateTruckAvailability :one
 INSERT INTO truck_availability (
   created_by,

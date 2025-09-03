@@ -87,6 +87,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.listUsersStmt, err = db.PrepareContext(ctx, ListUsers); err != nil {
 		return nil, fmt.Errorf("error preparing query ListUsers: %w", err)
 	}
+	if q.updateCargoOfferStatusStmt, err = db.PrepareContext(ctx, UpdateCargoOfferStatus); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateCargoOfferStatus: %w", err)
+	}
 	if q.updateTruckAvailabilityStatusStmt, err = db.PrepareContext(ctx, UpdateTruckAvailabilityStatus); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateTruckAvailabilityStatus: %w", err)
 	}
@@ -206,6 +209,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing listUsersStmt: %w", cerr)
 		}
 	}
+	if q.updateCargoOfferStatusStmt != nil {
+		if cerr := q.updateCargoOfferStatusStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateCargoOfferStatusStmt: %w", cerr)
+		}
+	}
 	if q.updateTruckAvailabilityStatusStmt != nil {
 		if cerr := q.updateTruckAvailabilityStatusStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing updateTruckAvailabilityStatusStmt: %w", cerr)
@@ -281,6 +289,7 @@ type Queries struct {
 	listCountriesStmt                        *sql.Stmt
 	listTruckAvailabilityStmt                *sql.Stmt
 	listUsersStmt                            *sql.Stmt
+	updateCargoOfferStatusStmt               *sql.Stmt
 	updateTruckAvailabilityStatusStmt        *sql.Stmt
 	updateUserProfileStmt                    *sql.Stmt
 	updateUserStatusStmt                     *sql.Stmt
@@ -311,6 +320,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		listCountriesStmt:                        q.listCountriesStmt,
 		listTruckAvailabilityStmt:                q.listTruckAvailabilityStmt,
 		listUsersStmt:                            q.listUsersStmt,
+		updateCargoOfferStatusStmt:               q.updateCargoOfferStatusStmt,
 		updateTruckAvailabilityStatusStmt:        q.updateTruckAvailabilityStatusStmt,
 		updateUserProfileStmt:                    q.updateUserProfileStmt,
 		updateUserStatusStmt:                     q.updateUserStatusStmt,

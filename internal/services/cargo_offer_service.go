@@ -194,3 +194,45 @@ func (s *CargoOfferService) List(ctx context.Context, q request.ListCargoOffersQ
 	_ = json.Unmarshal(raw, &out)
 	return out, nil
 }
+
+func (s *CargoOfferService) UpdateStatus(
+	ctx context.Context,
+	id int32,
+	userID int32,
+	status string,
+) (map[string]any, *response.AppError) {
+	st := strings.ToLower(strings.TrimSpace(status))
+	switch st {
+	case "draft", "published", "cancelled", "expired", "closed":
+	default:
+		return nil, &response.AppError{
+			Code:    "bad_request",
+			Message: "status must be one of: draft, published, cancelled, expired, closed",
+			Status:  400,
+		}
+	}
+
+	// 1) Provera vlasništva (da ne možemo menjati tuđ oglas)
+	row, err := s.q.GetCargoOffer(ctx, id)
+	if err != nil {
+		return nil, &response.AppError{Code: "not_found", Message: "Truck availability not found", Status: 404}
+	}
+	if row.CreatedBy != userID {
+		return nil, &response.AppError{Code: "forbidden", Message: "You cannot modify this resource", Status: 403}
+	}
+
+	// 2) Update status-a
+	updated, err := s.q.UpdateTruckAvailabilityStatus(ctx, store.UpdateTruckAvailabilityStatusParams{
+		ID:     id,
+		Status: st,
+	})
+	if err != nil {
+		return nil, &response.AppError{Code: "update_failed", Message: "Failed to update status", Status: 500}
+	}
+
+	// 3) Povratak kao map[string]any
+	raw, _ := json.Marshal(updated)
+	var out map[string]any
+	_ = json.Unmarshal(raw, &out)
+	return out, nil
+}

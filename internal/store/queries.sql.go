@@ -1023,6 +1023,52 @@ func (q *Queries) ListUsers(ctx context.Context) ([]ListUsersRow, error) {
 	return items, nil
 }
 
+const UpdateCargoOfferStatus = `-- name: UpdateCargoOfferStatus :one
+UPDATE cargo_offers
+SET status = $2, updated_at = now()
+WHERE id = $1
+RETURNING id, created_by, origin_country_id, origin_city_id, destination_country_id, destination_city_id, loading_places, unloading_places, ready_to_load_by, delivery_deadline, load_type, truck_type, weight_t, volume_m3, pallets, palletized, temperature_min_c, temperature_max_c, published_at, expires_at, price, currency, notes, status, created_at, updated_at
+`
+
+type UpdateCargoOfferStatusParams struct {
+	ID     int32  `json:"id"`
+	Status string `json:"status"`
+}
+
+func (q *Queries) UpdateCargoOfferStatus(ctx context.Context, arg UpdateCargoOfferStatusParams) (CargoOffer, error) {
+	row := q.queryRow(ctx, q.updateCargoOfferStatusStmt, UpdateCargoOfferStatus, arg.ID, arg.Status)
+	var i CargoOffer
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedBy,
+		&i.OriginCountryID,
+		&i.OriginCityID,
+		&i.DestinationCountryID,
+		&i.DestinationCityID,
+		&i.LoadingPlaces,
+		&i.UnloadingPlaces,
+		&i.ReadyToLoadBy,
+		&i.DeliveryDeadline,
+		&i.LoadType,
+		&i.TruckType,
+		&i.WeightT,
+		&i.VolumeM3,
+		&i.Pallets,
+		&i.Palletized,
+		&i.TemperatureMinC,
+		&i.TemperatureMaxC,
+		&i.PublishedAt,
+		&i.ExpiresAt,
+		&i.Price,
+		&i.Currency,
+		&i.Notes,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const UpdateTruckAvailabilityStatus = `-- name: UpdateTruckAvailabilityStatus :one
 UPDATE truck_availability
 SET status = $2, updated_at = now()

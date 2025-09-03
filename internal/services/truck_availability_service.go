@@ -172,11 +172,11 @@ func (s *TruckAvailabilityService) UpdateStatus(
 ) (map[string]any, *response.AppError) {
 	st := strings.ToLower(strings.TrimSpace(status))
 	switch st {
-	case "published", "draft", "closed":
+	case "draft", "published", "cancelled", "expired", "closed":
 	default:
 		return nil, &response.AppError{
 			Code:    "bad_request",
-			Message: "status must be one of: published, draft, closed",
+			Message: "status must be one of: draft, published, cancelled, expired, closed",
 			Status:  400,
 		}
 	}
