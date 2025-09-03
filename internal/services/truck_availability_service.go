@@ -164,12 +164,7 @@ func (s *TruckAvailabilityService) List(ctx context.Context, qy request.ListTruc
 	return out, nil
 }
 
-func (s *TruckAvailabilityService) UpdateStatus(
-	ctx context.Context,
-	id int32,
-	userID int32,
-	status string,
-) (map[string]any, *response.AppError) {
+func (s *TruckAvailabilityService) UpdateStatus(ctx context.Context, id int32, userID int32, status string) (map[string]any, *response.AppError) {
 	st := strings.ToLower(strings.TrimSpace(status))
 	switch st {
 	case "draft", "published", "cancelled", "expired", "closed":

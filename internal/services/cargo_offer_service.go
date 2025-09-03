@@ -195,12 +195,7 @@ func (s *CargoOfferService) List(ctx context.Context, q request.ListCargoOffersQ
 	return out, nil
 }
 
-func (s *CargoOfferService) UpdateStatus(
-	ctx context.Context,
-	id int32,
-	userID int32,
-	status string,
-) (map[string]any, *response.AppError) {
+func (s *CargoOfferService) UpdateStatus(ctx context.Context, id int32, userID int32, status string) (map[string]any, *response.AppError) {
 	st := strings.ToLower(strings.TrimSpace(status))
 	switch st {
 	case "draft", "published", "cancelled", "expired", "closed":
@@ -222,7 +217,7 @@ func (s *CargoOfferService) UpdateStatus(
 	}
 
 	// 2) Update status-a
-	updated, err := s.q.UpdateTruckAvailabilityStatus(ctx, store.UpdateTruckAvailabilityStatusParams{
+	updated, err := s.q.UpdateCargoOfferStatus(ctx, store.UpdateCargoOfferStatusParams{
 		ID:     id,
 		Status: st,
 	})
