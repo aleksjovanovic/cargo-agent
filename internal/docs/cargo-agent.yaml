@@ -9,8 +9,17 @@ info:
     This API simplifies the process of matching freight with carriers, improving efficiency
     and reducing the complexity of cargo transportation management.
 
+    ---
+    ### Rate limiting
+    Unless stated otherwise, endpoints are rate-limited (default **60 req/min** per user or IP).
+    When applicable, responses include the following headers:
+    - **X-RateLimit-Limit**: total requests allowed in the current window
+    - **X-RateLimit-Remaining**: remaining requests in the current window
+    - **Retry-After**: seconds until next window (only when `429`)
+
 servers:
   - url: http://localhost:8081/cargo-agent/v1
+  - url: http://localhost:8081
 
 paths:
   /health-check:
@@ -22,6 +31,9 @@ paths:
       responses:
         '200':
           description: Server is healthy
+          headers:
+            X-RateLimit-Limit: { $ref: '#/components/headers/XRateLimitLimit' }
+            X-RateLimit-Remaining: { $ref: '#/components/headers/XRateLimitRemaining' }
           content:
             application/json:
               schema:
@@ -30,6 +42,65 @@ paths:
                 ok:
                   value:
                     message: Server is OK
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /readyz:
+    get:
+      tags: [Health]
+      summary: Readiness probe (DB + Redis)
+      description: Returns readiness of core dependencies. 200 when DB and Redis are reachable; 503 otherwise.
+      operationId: getReadyz
+      servers:
+        - url: http://localhost:8081
+      responses:
+        '200':
+          description: Ready
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReadyzSuccessResponse' }
+              examples:
+                ready:
+                  value:
+                    message: ready
+                    data:
+                      db: { ok: true }
+                      redis: { ok: true }
+        '503':
+          description: Not ready (one or more dependencies unavailable)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReadyzErrorResponse' }
+              examples:
+                not_ready:
+                  value:
+                    error: not_ready
+                    message: dependencies not ready
+                    details:
+                      db: { ok: false }
+                      redis: { ok: true }
+
+  /metrics:
+    get:
+      tags: [Ops]
+      summary: Prometheus metrics
+      description: Exposes Prometheus/OpenMetrics text format.
+      operationId: getMetrics
+      servers:
+        - url: http://localhost:8081
+      responses:
+        '200':
+          description: Metrics stream (text)
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                snippet:
+                  value: |
+                    # HELP http_requests_total Total number of HTTP requests
+                    # TYPE http_requests_total counter
+                    http_requests_total{method="GET",route="GET /cargo-agent/v1/health-check",status="200"} 42
 
   /users/login:
     post:
@@ -50,6 +121,9 @@ paths:
       responses:
         '200':
           description: Login successful
+          headers:
+            X-RateLimit-Limit: { $ref: '#/components/headers/XRateLimitLimit' }
+            X-RateLimit-Remaining: { $ref: '#/components/headers/XRateLimitRemaining' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/LoginSuccessResponse' }
@@ -69,6 +143,8 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /users/logout:
     post:
@@ -81,6 +157,9 @@ paths:
       responses:
         '200':
           description: Logout successful
+          headers:
+            X-RateLimit-Limit: { $ref: '#/components/headers/XRateLimitLimit' }
+            X-RateLimit-Remaining: { $ref: '#/components/headers/XRateLimitRemaining' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/DeleteUserSuccessResponse' }
@@ -116,6 +195,8 @@ paths:
                     error: token_expired
                     message: Token has expired
                     details: null
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '500':
           description: Server error while revoking token
           content:
@@ -148,6 +229,9 @@ paths:
       responses:
         '201':
           description: User created successfully
+          headers:
+            X-RateLimit-Limit: { $ref: '#/components/headers/XRateLimitLimit' }
+            X-RateLimit-Remaining: { $ref: '#/components/headers/XRateLimitRemaining' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/CreateUserSuccessResponse' }
@@ -200,6 +284,8 @@ paths:
                     error: email_exists
                     message: Email already exists
                     details: null
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '500':
           description: Internal error while creating user
           content:
@@ -242,6 +328,9 @@ paths:
       responses:
         '200':
           description: Email verified
+          headers:
+            X-RateLimit-Limit: { $ref: '#/components/headers/XRateLimitLimit' }
+            X-RateLimit-Remaining: { $ref: '#/components/headers/XRateLimitRemaining' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/DeleteUserSuccessResponse' }
@@ -272,8 +361,100 @@ paths:
                     error: token_expired
                     message: Token has expired
                     details: null
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '500':
           description: Server or database error during verification
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /users/password-reset/request:
+    post:
+      tags: [Auth]
+      summary: Start password reset
+      description: Sends a password reset email if the account exists. Response is always 200 for privacy.
+      operationId: passwordResetRequest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PasswordResetRequest' }
+            examples:
+              sample:
+                value:
+                  username_or_email: demo@example.com
+      responses:
+        '200':
+          description: A generic response; if the account exists, an email is sent.
+          headers:
+            X-RateLimit-Limit: { $ref: '#/components/headers/XRateLimitLimit' }
+            X-RateLimit-Remaining: { $ref: '#/components/headers/XRateLimitRemaining' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DeleteUserSuccessResponse' }
+              examples:
+                ok:
+                  value:
+                    message: If that account exists, an email has been sent
+                    data: null
+        '400':
+          description: Invalid payload
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          description: Server error while creating reset token or sending email
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /users/password-reset/confirm:
+    post:
+      tags: [Auth]
+      summary: Confirm password reset
+      description: Resets the password using a valid token.
+      operationId: passwordResetConfirm
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PasswordResetConfirmRequest' }
+            examples:
+              sample:
+                value:
+                  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                  new_password: NewStrong!234
+      responses:
+        '200':
+          description: Password successfully reset
+          headers:
+            X-RateLimit-Limit: { $ref: '#/components/headers/XRateLimitLimit' }
+            X-RateLimit-Remaining: { $ref: '#/components/headers/XRateLimitRemaining' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DeleteUserSuccessResponse' }
+              examples:
+                ok:
+                  value:
+                    message: Password reset successful
+                    data: null
+        '400':
+          description: Invalid token or weak password
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '410':
+          description: Token expired (gone)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          description: Server error while resetting password
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -289,6 +470,9 @@ paths:
       responses:
         '200':
           description: Profile loaded
+          headers:
+            X-RateLimit-Limit: { $ref: '#/components/headers/XRateLimitLimit' }
+            X-RateLimit-Remaining: { $ref: '#/components/headers/XRateLimitRemaining' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/UserProfileSuccessResponse' }
@@ -302,6 +486,8 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
     patch:
       tags: [User]
@@ -318,6 +504,9 @@ paths:
       responses:
         '200':
           description: User profile updated successfully
+          headers:
+            X-RateLimit-Limit: { $ref: '#/components/headers/XRateLimitLimit' }
+            X-RateLimit-Remaining: { $ref: '#/components/headers/XRateLimitRemaining' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/UserProfileSuccessResponse' }
@@ -336,43 +525,10 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '500':
           description: Update failed (database or server error)
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ErrorResponse' }
-
-  /users/me/password:
-    put:
-      tags: [User, Auth]
-      summary: Change current user's password
-      description: Requires a valid JWT token and the correct old password.
-      operationId: changeMyPassword
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/ChangePasswordRequest' }
-      responses:
-        '200':
-          description: Password updated successfully
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/DeleteUserSuccessResponse' }
-        '400':
-          description: Invalid payload or weak password
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ErrorResponse' }
-        '401':
-          description: Unauthorized or invalid old password
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ErrorResponse' }
-        '500':
-          description: Internal error while changing password
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -395,6 +551,9 @@ paths:
       responses:
         '200':
           description: User deleted successfully
+          headers:
+            X-RateLimit-Limit: { $ref: '#/components/headers/XRateLimitLimit' }
+            X-RateLimit-Remaining: { $ref: '#/components/headers/XRateLimitRemaining' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/DeleteUserSuccessResponse' }
@@ -408,6 +567,8 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '500':
           description: Delete failed (database or server error)
           content:
@@ -425,6 +586,9 @@ paths:
       responses:
         '200':
           description: Countries loaded
+          headers:
+            X-RateLimit-Limit: { $ref: '#/components/headers/XRateLimitLimit' }
+            X-RateLimit-Remaining: { $ref: '#/components/headers/XRateLimitRemaining' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/CountriesListSuccessResponse' }
@@ -438,6 +602,8 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /countries/{id}:
     get:
@@ -457,6 +623,9 @@ paths:
       responses:
         '200':
           description: Country loaded
+          headers:
+            X-RateLimit-Limit: { $ref: '#/components/headers/XRateLimitLimit' }
+            X-RateLimit-Remaining: { $ref: '#/components/headers/XRateLimitRemaining' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/CountrySuccessResponse' }
@@ -475,6 +644,8 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /countries/name/{name}:
     get:
@@ -494,6 +665,9 @@ paths:
       responses:
         '200':
           description: Country loaded
+          headers:
+            X-RateLimit-Limit: { $ref: '#/components/headers/XRateLimitLimit' }
+            X-RateLimit-Remaining: { $ref: '#/components/headers/XRateLimitRemaining' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/CountrySuccessResponse' }
@@ -518,6 +692,8 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /countries/id/{id}/cities:
     get:
@@ -537,6 +713,9 @@ paths:
       responses:
         '200':
           description: Cities loaded
+          headers:
+            X-RateLimit-Limit: { $ref: '#/components/headers/XRateLimitLimit' }
+            X-RateLimit-Remaining: { $ref: '#/components/headers/XRateLimitRemaining' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/CitiesListByCountrySuccessResponse' }
@@ -555,6 +734,8 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /countries/name/{name}/cities:
     get:
@@ -574,6 +755,9 @@ paths:
       responses:
         '200':
           description: Cities loaded
+          headers:
+            X-RateLimit-Limit: { $ref: '#/components/headers/XRateLimitLimit' }
+            X-RateLimit-Remaining: { $ref: '#/components/headers/XRateLimitRemaining' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/CitiesListByCountrySuccessResponse' }
@@ -598,6 +782,8 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /cargo-offers:
     get:
@@ -656,6 +842,9 @@ paths:
       responses:
         '200':
           description: List loaded
+          headers:
+            X-RateLimit-Limit: { $ref: '#/components/headers/XRateLimitLimit' }
+            X-RateLimit-Remaining: { $ref: '#/components/headers/XRateLimitRemaining' }
           content:
             application/json:
               schema:
@@ -671,6 +860,8 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
     post:
       tags: [CargoOffers]
@@ -685,6 +876,9 @@ paths:
       responses:
         '201':
           description: Created
+          headers:
+            X-RateLimit-Limit: { $ref: '#/components/headers/XRateLimitLimit' }
+            X-RateLimit-Remaining: { $ref: '#/components/headers/XRateLimitRemaining' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/CargoOfferSuccessResponse' }
@@ -698,6 +892,8 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /cargo-offers/{id}:
     get:
@@ -711,6 +907,9 @@ paths:
       responses:
         '200':
           description: OK
+          headers:
+            X-RateLimit-Limit: { $ref: '#/components/headers/XRateLimitLimit' }
+            X-RateLimit-Remaining: { $ref: '#/components/headers/XRateLimitRemaining' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/CargoOfferSuccessResponse' }
@@ -724,6 +923,8 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /cargo-offers/{id}/status:
     patch:
@@ -750,6 +951,9 @@ paths:
       responses:
         '200':
           description: Status updated
+          headers:
+            X-RateLimit-Limit: { $ref: '#/components/headers/XRateLimitLimit' }
+            X-RateLimit-Remaining: { $ref: '#/components/headers/XRateLimitRemaining' }
           content:
             application/json:
               schema:
@@ -769,6 +973,8 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /truck-availability:
     get:
@@ -819,6 +1025,9 @@ paths:
       responses:
         '200':
           description: List loaded
+          headers:
+            X-RateLimit-Limit: { $ref: '#/components/headers/XRateLimitLimit' }
+            X-RateLimit-Remaining: { $ref: '#/components/headers/XRateLimitRemaining' }
           content:
             application/json:
               schema:
@@ -834,6 +1043,8 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
     post:
       tags: [TruckAvailability]
       summary: Create truck availability
@@ -847,6 +1058,9 @@ paths:
       responses:
         '201':
           description: Created
+          headers:
+            X-RateLimit-Limit: { $ref: '#/components/headers/XRateLimitLimit' }
+            X-RateLimit-Remaining: { $ref: '#/components/headers/XRateLimitRemaining' }
           content:
             application/json:
               schema:
@@ -864,6 +1078,8 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /truck-availability/{id}:
     get:
@@ -877,6 +1093,9 @@ paths:
       responses:
         '200':
           description: OK
+          headers:
+            X-RateLimit-Limit: { $ref: '#/components/headers/XRateLimitLimit' }
+            X-RateLimit-Remaining: { $ref: '#/components/headers/XRateLimitRemaining' }
           content:
             application/json:
               schema:
@@ -894,6 +1113,8 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /truck-availability/{id}/status:
     patch:
@@ -920,6 +1141,9 @@ paths:
       responses:
         '200':
           description: Status updated
+          headers:
+            X-RateLimit-Limit: { $ref: '#/components/headers/XRateLimitLimit' }
+            X-RateLimit-Remaining: { $ref: '#/components/headers/XRateLimitRemaining' }
           content:
             application/json:
               schema:
@@ -948,6 +1172,8 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
 components:
   securitySchemes:
@@ -955,6 +1181,34 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+
+  headers:
+    XRateLimitLimit:
+      description: Total number of requests allowed in the current window
+      schema: { type: integer, example: 60 }
+    XRateLimitRemaining:
+      description: Remaining number of requests in the current window
+      schema: { type: integer, example: 42 }
+    RetryAfter:
+      description: Seconds until the next window (only present on 429)
+      schema: { type: integer, example: 30 }
+
+  responses:
+    TooManyRequests:
+      description: Too many requests
+      headers:
+        X-RateLimit-Limit: { $ref: '#/components/headers/XRateLimitLimit' }
+        X-RateLimit-Remaining: { $ref: '#/components/headers/XRateLimitRemaining' }
+        Retry-After: { $ref: '#/components/headers/RetryAfter' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          examples:
+            limited:
+              value:
+                error: rate_limited
+                message: Too many requests. Please try again later.
+                details: null
 
   schemas:
     HealthCheckResponse:
@@ -964,6 +1218,41 @@ components:
           type: string
           example: Server is OK
       required: [message]
+
+    ReadyzSuccessResponse:
+      type: object
+      properties:
+        message: { type: string, example: ready }
+        data:
+          type: object
+          properties:
+            db:
+              type: object
+              properties:
+                ok: { type: boolean, example: true }
+            redis:
+              type: object
+              properties:
+                ok: { type: boolean, example: true }
+      required: [message, data]
+
+    ReadyzErrorResponse:
+      type: object
+      properties:
+        error: { type: string, example: not_ready }
+        message: { type: string, example: dependencies not ready }
+        details:
+          type: object
+          properties:
+            db:
+              type: object
+              properties:
+                ok: { type: boolean, example: false }
+            redis:
+              type: object
+              properties:
+                ok: { type: boolean, example: true }
+      required: [error, message]
 
     LoginRequest:
       type: object
@@ -1230,3 +1519,25 @@ components:
         price_per_km: { type: number, format: float, nullable: true }
         currency: { type: string, nullable: true, example: EUR }
         notes: { type: string, nullable: true }
+
+    PasswordResetRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+          example: demo@example.com
+
+    PasswordResetConfirmRequest:
+      type: object
+      required: [token, new_password]
+      properties:
+        token:
+          type: string
+          description: Password reset token
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        new_password:
+          type: string
+          format: password
+          example: NewStrong!234
