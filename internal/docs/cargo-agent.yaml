@@ -533,6 +533,81 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
 
+  /users/me/password:
+    put:
+      tags: [User]
+      summary: Change current user's password
+      description: |
+        Updates the authenticated user's password. The request must include the current
+        password and a new password that satisfies the password policy.
+        Requires a valid JWT token.
+      operationId: changeUserPassword
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ChangePasswordRequest' }
+            examples:
+              sample:
+                value:
+                  old_password: DemoPass123!
+                  new_password: NewStrong!234
+      responses:
+        '200':
+          description: Password updated successfully
+          headers:
+            X-RateLimit-Limit: { $ref: '#/components/headers/XRateLimitLimit' }
+            X-RateLimit-Remaining: { $ref: '#/components/headers/XRateLimitRemaining' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DeleteUserSuccessResponse' }
+              examples:
+                ok:
+                  value:
+                    message: Password updated successfully
+                    data: null
+        '400':
+          description: Invalid payload or password policy violation
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                bad_request:
+                  value:
+                    error: bad_request
+                    message: new password must be at least 8 characters long
+                    details: null
+                invalid_new_password:
+                  value:
+                    error: invalid_new_password
+                    message: New password must be different from the old password
+                    details: null
+        '401':
+          description: Unauthorized (missing/invalid token) or old password incorrect
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                invalid_old_password:
+                  value:
+                    error: invalid_old_password
+                    message: Old password is incorrect
+                    details: null
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          description: Server error while changing password
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
   /users/{id}:
     delete:
       tags: [User]
