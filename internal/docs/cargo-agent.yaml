@@ -654,10 +654,8 @@ paths:
     get:
       tags: [Country]
       summary: List countries
-      description: Returns a list of countries. Requires a valid JWT token.
+      description: Returns a list of countries. **Public endpoint.**
       operationId: listCountries
-      security:
-        - bearerAuth: []
       responses:
         '200':
           description: Countries loaded
@@ -667,11 +665,6 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/CountriesListSuccessResponse' }
-        '401':
-          description: Unauthorized (missing or invalid token)
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ErrorResponse' }
         '404':
           description: Countries not found
           content:
@@ -684,10 +677,8 @@ paths:
     get:
       tags: [Country]
       summary: Get country by ID
-      description: Returns a single country by its ID. Requires a valid JWT token.
+      description: Returns a single country by its ID. **Public endpoint.**
       operationId: getCountryById
-      security:
-        - bearerAuth: []
       parameters:
         - name: id
           in: path
@@ -709,11 +700,6 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
-        '401':
-          description: Unauthorized (missing or invalid token)
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ErrorResponse' }
         '404':
           description: Country not found
           content:
@@ -726,10 +712,8 @@ paths:
     get:
       tags: [Country]
       summary: Get country by name
-      description: Returns a single country by its name. Requires a valid JWT token.
+      description: Returns a single country by its name. **Public endpoint.**
       operationId: getCountryByName
-      security:
-        - bearerAuth: []
       parameters:
         - name: name
           in: path
@@ -757,11 +741,6 @@ paths:
                     error: invalid_name
                     message: Country name cannot be empty
                     details: null
-        '401':
-          description: Unauthorized (missing or invalid token)
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ErrorResponse' }
         '404':
           description: Country not found
           content:
@@ -774,10 +753,8 @@ paths:
     get:
       tags: [Country, City]
       summary: List cities by country ID
-      description: Returns a list of cities for the given country ID. Requires a valid JWT token.
+      description: Returns a list of cities for the given country ID. **Public endpoint.**
       operationId: listCitiesByCountryId
-      security:
-        - bearerAuth: []
       parameters:
         - name: id
           in: path
@@ -799,11 +776,6 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
-        '401':
-          description: Unauthorized (missing or invalid token)
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ErrorResponse' }
         '404':
           description: Cities not found for the specified ID
           content:
@@ -816,10 +788,8 @@ paths:
     get:
       tags: [Country, City]
       summary: List cities by country name
-      description: Returns a list of cities for the given country name. Requires a valid JWT token.
+      description: Returns a list of cities for the given country name. **Public endpoint.**
       operationId: listCitiesByCountryName
-      security:
-        - bearerAuth: []
       parameters:
         - name: name
           in: path
@@ -847,11 +817,6 @@ paths:
                     error: invalid_name
                     message: Country name cannot be empty
                     details: null
-        '401':
-          description: Unauthorized (missing or invalid token)
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ErrorResponse' }
         '404':
           description: Cities not found for the specified country name
           content:

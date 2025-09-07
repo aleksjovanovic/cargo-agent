@@ -78,21 +78,21 @@ func SetupHealthCheckRoute(mux *http.ServeMux, handler *handlers.Handler, db *sq
 }
 
 // SetupCountryRoutes registers country and nested city routes under /cargo-agent/v1/countries/*.
-func SetupCountryRoutes(mux *http.ServeMux, handler *handlers.Handler, auth authFn) {
+func SetupCountryRoutes(mux *http.ServeMux, handler *handlers.Handler, _ authFn) {
 	cMux := http.NewServeMux()
 
-	// Country lookups
-	cMux.Handle("GET /name/{name}", auth(http.HandlerFunc(handler.GetCountryByNameHandler())))
-	cMux.Handle("GET /name/{name}/", auth(http.HandlerFunc(handler.GetCountryByNameHandler()))) // trailing slash variant
-	cMux.Handle("GET /{id}", auth(http.HandlerFunc(handler.GetCountryByIDHandler())))
-	cMux.Handle("GET /{id}/", auth(http.HandlerFunc(handler.GetCountryByIDHandler()))) // trailing slash variant
-	cMux.Handle("GET /", auth(http.HandlerFunc(handler.ListCountriesHandler())))
+	// Country lookups (public)
+	cMux.Handle("GET /name/{name}", http.HandlerFunc(handler.GetCountryByNameHandler()))
+	cMux.Handle("GET /name/{name}/", http.HandlerFunc(handler.GetCountryByNameHandler())) // trailing slash variant
+	cMux.Handle("GET /{id}", http.HandlerFunc(handler.GetCountryByIDHandler()))
+	cMux.Handle("GET /{id}/", http.HandlerFunc(handler.GetCountryByIDHandler())) // trailing slash variant
+	cMux.Handle("GET /", http.HandlerFunc(handler.ListCountriesHandler()))
 
-	// Cities under country
-	cMux.Handle("GET /id/{id}/cities", auth(http.HandlerFunc(handler.ListCitiesByCountryIDHandler())))
-	cMux.Handle("GET /id/{id}/cities/", auth(http.HandlerFunc(handler.ListCitiesByCountryIDHandler()))) // trailing slash variant
-	cMux.Handle("GET /name/{name}/cities", auth(http.HandlerFunc(handler.ListCitiesByCountryNameHandler())))
-	cMux.Handle("GET /name/{name}/cities/", auth(http.HandlerFunc(handler.ListCitiesByCountryNameHandler()))) // trailing slash variant
+	// Cities under country (public)
+	cMux.Handle("GET /id/{id}/cities", http.HandlerFunc(handler.ListCitiesByCountryIDHandler()))
+	cMux.Handle("GET /id/{id}/cities/", http.HandlerFunc(handler.ListCitiesByCountryIDHandler())) // trailing slash variant
+	cMux.Handle("GET /name/{name}/cities", http.HandlerFunc(handler.ListCitiesByCountryNameHandler()))
+	cMux.Handle("GET /name/{name}/cities/", http.HandlerFunc(handler.ListCitiesByCountryNameHandler())) // trailing slash variant
 
 	// Guard routes to provide helpful 400s when path params are missing.
 	cMux.Handle("GET /id", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

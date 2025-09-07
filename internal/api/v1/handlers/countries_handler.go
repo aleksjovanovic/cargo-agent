@@ -7,12 +7,12 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/aleksjovanovic/cargo-agent/internal/authn"
 	"github.com/aleksjovanovic/cargo-agent/internal/ctxmeta"
 	"github.com/aleksjovanovic/cargo-agent/internal/logger"
-	"github.com/aleksjovanovic/cargo-agent/internal/middleware"
 	"github.com/aleksjovanovic/cargo-agent/internal/response"
 )
+
+// NOTE: All country/city endpoints are PUBLIC now (no auth checks here).
 
 // asInt32 tries to coerce a dynamic "id" value (commonly unmarshaled as float64 or int types)
 // into int32. Returns (0, false) when the value type is unsupported.
@@ -47,13 +47,6 @@ func (h *Handler) ListCountriesHandler() http.HandlerFunc {
 			return
 		}
 
-		// Auth check (middleware also protects this route, this is an extra safety net)
-		if _, ok := r.Context().Value(middleware.UserClaimsKey).(*authn.Claims); !ok {
-			logger.Warn("Unauthorized list countries", "op", op, "rid", rid)
-			response.RespondWithError(w, http.StatusUnauthorized, "unauthorized", "Please log in to continue", nil)
-			return
-		}
-
 		logger.Info("Listing countries", "op", op, "rid", rid)
 
 		countries, appErr := h.Countries.List(r.Context())
@@ -72,18 +65,11 @@ func (h *Handler) ListCountriesHandler() http.HandlerFunc {
 }
 
 // GetCountryByIDHandler returns a single country by numeric ID extracted from the path.
-// Flow: auth check -> parse {id} -> service call -> 200 or mapped error.
+// Flow: parse {id} -> service call -> 200 or mapped error.
 func (h *Handler) GetCountryByIDHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		op := "countries.get_by_id"
 		rid := ctxmeta.RequestID(r.Context())
-
-		// Extra safety net in case the route is misconfigured.
-		if _, ok := r.Context().Value(middleware.UserClaimsKey).(*authn.Claims); !ok {
-			logger.Warn("Unauthorized get country by id", "op", op, "rid", rid)
-			response.RespondWithError(w, http.StatusUnauthorized, "unauthorized", "Please log in to continue", nil)
-			return
-		}
 
 		id := r.PathValue("id")
 		countryID, err := strconv.ParseInt(id, 10, 32)
@@ -111,17 +97,10 @@ func (h *Handler) GetCountryByIDHandler() http.HandlerFunc {
 }
 
 // GetCountryByNameHandler returns a single country matched by its name provided in the path.
-// Name is trimmed (and can be case-sensitive depending on the service implementation).
 func (h *Handler) GetCountryByNameHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		op := "countries.get_by_name"
 		rid := ctxmeta.RequestID(r.Context())
-
-		if _, ok := r.Context().Value(middleware.UserClaimsKey).(*authn.Claims); !ok {
-			logger.Warn("Unauthorized get country by name", "op", op, "rid", rid)
-			response.RespondWithError(w, http.StatusUnauthorized, "unauthorized", "Please log in to continue", nil)
-			return
-		}
 
 		countryName := strings.TrimSpace(r.PathValue("name"))
 		if countryName == "" {
@@ -148,17 +127,11 @@ func (h *Handler) GetCountryByNameHandler() http.HandlerFunc {
 }
 
 // ListCitiesByCountryIDHandler returns all cities for the given country id.
-// Flow: auth -> parse {id} -> service call -> 200 or mapped error.
+// Flow: parse {id} -> service call -> 200 or mapped error.
 func (h *Handler) ListCitiesByCountryIDHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		op := "countries.cities_by_id"
 		rid := ctxmeta.RequestID(r.Context())
-
-		if _, ok := r.Context().Value(middleware.UserClaimsKey).(*authn.Claims); !ok {
-			logger.Warn("Unauthorized list cities by country id", "op", op, "rid", rid)
-			response.RespondWithError(w, http.StatusUnauthorized, "unauthorized", "Please log in to continue", nil)
-			return
-		}
 
 		id := r.PathValue("id")
 		countryID, err := strconv.ParseInt(id, 10, 32)
@@ -186,17 +159,10 @@ func (h *Handler) ListCitiesByCountryIDHandler() http.HandlerFunc {
 }
 
 // ListCitiesByCountryNameHandler resolves a country by name, then lists its cities.
-// We intentionally avoid exposing whether the country exists in error messages, deferring to service mapping.
 func (h *Handler) ListCitiesByCountryNameHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		op := "countries.cities_by_name"
 		rid := ctxmeta.RequestID(r.Context())
-
-		if _, ok := r.Context().Value(middleware.UserClaimsKey).(*authn.Claims); !ok {
-			logger.Warn("Unauthorized list cities by country name", "op", op, "rid", rid)
-			response.RespondWithError(w, http.StatusUnauthorized, "unauthorized", "Please log in to continue", nil)
-			return
-		}
 
 		name := strings.TrimSpace(r.PathValue("name"))
 		if name == "" {
