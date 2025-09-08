@@ -1,3 +1,0 @@
--- Ako želiš čist rollback seedova:
-TRUNCATE TABLE cities RESTART IDENTITY CASCADE;
-TRUNCATE TABLE countries RESTART IDENTITY CASCADE;

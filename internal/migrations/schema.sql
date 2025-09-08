@@ -1802,7 +1802,7 @@ INSERT INTO cities (name, country_id, latitude, longitude) VALUES
 ('Zirknitz', 3, 46.94924, 15.26087),
 ('Zoebern', 3, 47.51459, 16.13111),
 ('Zwentendorf', 3, 48.34530, 15.91026),
-('Zwoelfaxing', 3, 48.10990, 16.46267)
+('Zwoelfaxing', 3, 48.10990, 16.46267),
 ('''s-Gravenwezel', 5, 51.26267, 4.56113),
 ('Aaigem', 5, 50.88921, 3.93674),
 ('Aartrijke', 5, 51.11915, 3.09076),
