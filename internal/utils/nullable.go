@@ -81,3 +81,10 @@ func ToLowerPtr(p *string) *string {
 	s := strings.ToLower(strings.TrimSpace(*p))
 	return &s
 }
+
+func StrToPtr(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
+}

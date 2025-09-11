@@ -2,7 +2,6 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -13,6 +12,7 @@ import (
 	"github.com/aleksjovanovic/cargo-agent/internal/logger"
 	"github.com/aleksjovanovic/cargo-agent/internal/middleware"
 	"github.com/aleksjovanovic/cargo-agent/internal/response"
+	"github.com/aleksjovanovic/cargo-agent/internal/utils"
 )
 
 // Create creates a cargo offer for the authenticated user.
@@ -131,10 +131,10 @@ func (h *Handler) List() http.HandlerFunc {
 			LoadType:             str(qv.Get("load_type")),
 			TruckType:            str(qv.Get("truck_type")),
 			Status:               str(qv.Get("status")),
-			ReadyFrom:            strToPtr(qv.Get("ready_from")),
-			ReadyTo:              strToPtr(qv.Get("ready_to")),
-			DeliveryFrom:         strToPtr(qv.Get("delivery_from")),
-			DeliveryTo:           strToPtr(qv.Get("delivery_to")),
+			ReadyFrom:            utils.StrToPtr(qv.Get("ready_from")),
+			ReadyTo:              utils.StrToPtr(qv.Get("ready_to")),
+			DeliveryFrom:         utils.StrToPtr(qv.Get("delivery_from")),
+			DeliveryTo:           utils.StrToPtr(qv.Get("delivery_to")),
 			Limit:                i32(qv.Get("limit")),
 			Page:                 i32(qv.Get("page")),
 		}
@@ -202,11 +202,4 @@ func (h *Handler) CargoOfferUpdateStatus() http.HandlerFunc {
 			"data":    out,
 		})
 	}
-}
-
-func strToPtr(s string) *string {
-	if s == "" {
-		return nil
-	}
-	return &s
 }
