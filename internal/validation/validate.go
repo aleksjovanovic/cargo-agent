@@ -102,7 +102,8 @@ func ValidateCreateUserRequest(req *request.CreateUserRequest) error {
 	if v := trim(req.Country); v == "" {
 		errs = append(errs, "country is required")
 	} else {
-		exact("country", v, 2)
+		// exact("country", v, 2)
+		minMax("country", v, 3, 100)
 	}
 
 	// City: required, 3-100

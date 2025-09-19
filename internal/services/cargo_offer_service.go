@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -77,7 +78,20 @@ func (s *CargoOfferService) Create(ctx context.Context, userID int32, req reques
 		}
 	}
 
-	// 4) Prepare insert parameters, normalizing case for enums and converting optionals to sql-friendly types.
+	// 4) Build a human-friendly poster snapshot from user row (non-fatal if missing).
+	u, uErr := s.q.GetUser(ctx, userID)
+	poster := ""
+	if uErr == nil {
+		poster = strings.TrimSpace(u.Name)
+		if poster == "" {
+			poster = u.Username
+		}
+	}
+	if strings.TrimSpace(poster) == "" {
+		poster = fmt.Sprintf("user-%d", userID)
+	}
+
+	// 5) Prepare insert parameters, normalizing case for enums and converting optionals to sql-friendly types.
 	params := store.CreateCargoOfferParams{
 		CreatedBy:            userID,
 		OriginCountryID:      req.OriginCountryID,
@@ -104,6 +118,7 @@ func (s *CargoOfferService) Create(ctx context.Context, userID int32, req reques
 
 		PublishedAt: utils.SqlNullTimePtr(pubAt),
 		ExpiresAt:   utils.SqlNullTimePtr(expAt),
+		PosterName:  poster,
 
 		Price:    utils.ToNullNumericString(req.Price),
 		Currency: utils.ToNullString(req.Currency),
@@ -113,7 +128,7 @@ func (s *CargoOfferService) Create(ctx context.Context, userID int32, req reques
 		Status: "published",
 	}
 
-	// 5) Persist to DB.
+	// 6) Persist to DB.
 	row, err := s.q.CreateCargoOffer(ctx, params)
 	if err != nil {
 		logger.Error("cargooffersvc.create.db_failed", "req_id", ctxmeta.RequestID(ctx), "user_id", userID, "error", err)
@@ -122,7 +137,7 @@ func (s *CargoOfferService) Create(ctx context.Context, userID int32, req reques
 		}
 	}
 
-	// 6) Convert the sqlc row struct to a generic map to keep handler responses decoupled from store layer structs.
+	// 7) Convert the sqlc row struct to a generic map to keep handler responses decoupled from store layer structs.
 	raw, _ := json.Marshal(row)
 	var out map[string]any
 	_ = json.Unmarshal(raw, &out)

@@ -41,7 +41,7 @@ INSERT INTO cargo_offers (
     weight_t, volume_m3, pallets, palletized,
     temperature_min_c, temperature_max_c,
     published_at, expires_at,
-    price, currency, notes, status
+     poster_name, price, currency, notes, status
 ) VALUES (
     $1,
     $2, $3,
@@ -53,8 +53,8 @@ INSERT INTO cargo_offers (
     $12, $13, $14, $15,
     $16, $17,
     $18, $19,
-    $20, $21, $22,
-    $23::offer_status
+    $20, $21, $22, $23,
+    $24::offer_status
 )
 RETURNING
     id,
@@ -93,6 +93,7 @@ type CreateCargoOfferParams struct {
 	TemperatureMaxC      sql.NullString `json:"temperature_max_c"`
 	PublishedAt          sql.NullTime   `json:"published_at"`
 	ExpiresAt            sql.NullTime   `json:"expires_at"`
+	PosterName           string         `json:"poster_name"`
 	Price                sql.NullString `json:"price"`
 	Currency             sql.NullString `json:"currency"`
 	Notes                sql.NullString `json:"notes"`
@@ -149,6 +150,7 @@ func (q *Queries) CreateCargoOffer(ctx context.Context, arg CreateCargoOfferPara
 		arg.TemperatureMaxC,
 		arg.PublishedAt,
 		arg.ExpiresAt,
+		arg.PosterName,
 		arg.Price,
 		arg.Currency,
 		arg.Notes,
@@ -699,7 +701,7 @@ func (q *Queries) GetUserPassword(ctx context.Context, id int32) (string, error)
 }
 
 const ListCargoOffers = `-- name: ListCargoOffers :many
-SELECT id, created_by, origin_country_id, origin_city_id, destination_country_id, destination_city_id, loading_places, unloading_places, ready_to_load_by, delivery_deadline, load_type, truck_type, weight_t, volume_m3, pallets, palletized, temperature_min_c, temperature_max_c, published_at, expires_at, price, currency, notes, status, created_at, updated_at
+SELECT id, created_by, origin_country_id, origin_city_id, destination_country_id, destination_city_id, loading_places, unloading_places, ready_to_load_by, delivery_deadline, load_type, truck_type, weight_t, volume_m3, pallets, palletized, temperature_min_c, temperature_max_c, published_at, expires_at, poster_name, price, currency, notes, status, created_at, updated_at
 FROM cargo_offers
 WHERE ($1::int IS NULL OR origin_country_id = $1::int)
   AND ($2::int IS NULL OR origin_city_id = $2::int)
@@ -776,6 +778,7 @@ func (q *Queries) ListCargoOffers(ctx context.Context, arg ListCargoOffersParams
 			&i.TemperatureMaxC,
 			&i.PublishedAt,
 			&i.ExpiresAt,
+			&i.PosterName,
 			&i.Price,
 			&i.Currency,
 			&i.Notes,
@@ -1027,7 +1030,7 @@ const UpdateCargoOfferStatus = `-- name: UpdateCargoOfferStatus :one
 UPDATE cargo_offers
 SET status = $2, updated_at = now()
 WHERE id = $1
-RETURNING id, created_by, origin_country_id, origin_city_id, destination_country_id, destination_city_id, loading_places, unloading_places, ready_to_load_by, delivery_deadline, load_type, truck_type, weight_t, volume_m3, pallets, palletized, temperature_min_c, temperature_max_c, published_at, expires_at, price, currency, notes, status, created_at, updated_at
+RETURNING id, created_by, origin_country_id, origin_city_id, destination_country_id, destination_city_id, loading_places, unloading_places, ready_to_load_by, delivery_deadline, load_type, truck_type, weight_t, volume_m3, pallets, palletized, temperature_min_c, temperature_max_c, published_at, expires_at, poster_name, price, currency, notes, status, created_at, updated_at
 `
 
 type UpdateCargoOfferStatusParams struct {
@@ -1059,6 +1062,7 @@ func (q *Queries) UpdateCargoOfferStatus(ctx context.Context, arg UpdateCargoOff
 		&i.TemperatureMaxC,
 		&i.PublishedAt,
 		&i.ExpiresAt,
+		&i.PosterName,
 		&i.Price,
 		&i.Currency,
 		&i.Notes,

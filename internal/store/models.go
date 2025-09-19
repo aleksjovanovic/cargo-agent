@@ -30,6 +30,7 @@ type CargoOffer struct {
 	TemperatureMaxC      sql.NullString `json:"temperature_max_c"`
 	PublishedAt          sql.NullTime   `json:"published_at"`
 	ExpiresAt            sql.NullTime   `json:"expires_at"`
+	PosterName           string         `json:"poster_name"`
 	Price                sql.NullString `json:"price"`
 	Currency             sql.NullString `json:"currency"`
 	Notes                sql.NullString `json:"notes"`

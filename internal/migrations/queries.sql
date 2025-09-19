@@ -110,7 +110,7 @@ INSERT INTO cargo_offers (
     weight_t, volume_m3, pallets, palletized,
     temperature_min_c, temperature_max_c,
     published_at, expires_at,
-    price, currency, notes, status
+     poster_name, price, currency, notes, status
 ) VALUES (
     sqlc.arg(created_by),
     sqlc.arg(origin_country_id), sqlc.arg(origin_city_id),
@@ -122,7 +122,7 @@ INSERT INTO cargo_offers (
     sqlc.arg(weight_t), sqlc.arg(volume_m3), sqlc.arg(pallets), sqlc.arg(palletized),
     sqlc.arg(temperature_min_c), sqlc.arg(temperature_max_c),
     sqlc.arg(published_at), sqlc.arg(expires_at),
-    sqlc.arg(price), sqlc.arg(currency), sqlc.arg(notes),
+    sqlc.arg(poster_name), sqlc.arg(price), sqlc.arg(currency), sqlc.arg(notes),
     sqlc.arg(status)::offer_status
 )
 RETURNING

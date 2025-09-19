@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(254) NOT NULL, 
     password VARCHAR(255) NOT NULL,
     name VARCHAR(150) NOT NULL,
-    country CHAR(2) NOT NULL,
+    country CHAR(100) NOT NULL,
     city VARCHAR(100) NOT NULL,
     legal_address VARCHAR(100) NOT NULL,
     vat_number VARCHAR(30) NOT NULL,
@@ -29986,6 +29986,7 @@ CREATE TABLE IF NOT EXISTS cargo_offers (
     published_at TIMESTAMPTZ DEFAULT now(),
     expires_at   TIMESTAMPTZ,
 
+    poster_name TEXT NOT NULL,                -- snapshot imena/username-a
     price     NUMERIC(12,2),
     currency  CHAR(3) DEFAULT 'EUR',
 
